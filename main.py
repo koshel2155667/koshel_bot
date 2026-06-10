@@ -1524,43 +1524,56 @@ async def text_button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE
     text = update.message.text.strip()
 
     # =========================
-    # ADMIN ACTION MODE
+    # 1. ADMIN ACTION MODE
     # =========================
     if context.user_data.get("admin_action"):
 
         action = context.user_data["admin_action"]
 
-        if action == "give_money":
-            target_id, amount = map(int, text.split())
-            await update.message.reply_text("✅ Выдано")
-            context.user_data["admin_action"] = None
-            return
+        try:
+            if action == "give_money":
+                target_id, amount = map(int, text.split())
+                # TODO: логика выдачи денег
+                await update.message.reply_text("✅ Выдано")
 
-        if action == "take_money":
-            target_id, amount = map(int, text.split())
-            await update.message.reply_text("💸 Списано")
-            context.user_data["admin_action"] = None
-            return
+            elif action == "take_money":
+                target_id, amount = map(int, text.split())
+                # TODO: логика списания денег
+                await update.message.reply_text("💸 Списано")
 
-        if action == "ban":
-            target_id = int(text)
-            await update.message.reply_text("🚫 Забанен")
-            context.user_data["admin_action"] = None
-            return
+            elif action == "ban":
+                target_id = int(text)
+                # TODO: бан
+                await update.message.reply_text("🚫 Забанен")
 
-        if action == "unban":
-            target_id = int(text)
-            await update.message.reply_text("✅ Разбанен")
-            context.user_data["admin_action"] = None
-            return
+            elif action == "unban":
+                target_id = int(text)
+                # TODO: разбан
+                await update.message.reply_text("✅ Разбанен")
 
-        if action == "broadcast":
-            await update.message.reply_text("📢 Рассылка отправлена")
+            elif action == "broadcast":
+                # TODO: рассылка
+                await update.message.reply_text("📢 Рассылка отправлена")
+
+        except Exception:
+            await update.message.reply_text("❌ Ошибка ввода. Проверь формат")
+
+        finally:
             context.user_data["admin_action"] = None
             return
 
     # =========================
-    # РЕЖИМЫ ВВОДА
+    # 2. BET MODE
+    # =========================
+    if context.user_data.get("bet"):
+        try:
+            await handle_bet_amount(update, context)
+        except Exception:
+            await update.message.reply_text("❌ Ошибка ставки")
+        return
+
+    # =========================
+    # 3. OTHER MODES
     # =========================
     if context.user_data.get("adding_friend"):
         await handle_add_friend(update, context)
@@ -1574,12 +1587,8 @@ async def text_button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE
         await use_promo(update, context)
         return
 
-    if context.user_data.get("bet"):
-        await handle_bet_amount(update, context)
-        return
-
     # =========================
-    # ГЛАВНОЕ МЕНЮ
+    # 4. MAIN MENU
     # =========================
     if text == "🏒 Матчи":
         await matches(update, context)
@@ -1622,7 +1631,7 @@ async def text_button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE
         return
 
     # =========================
-    # АДМИН КНОПКИ
+    # 5. ADMIN MENU
     # =========================
     if user_id in ADMIN_IDS:
 
@@ -1671,7 +1680,7 @@ async def text_button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE
             return
 
     # =========================
-    # FALLBACK
+    # 6. FALLBACK
     # =========================
     await update.message.reply_text("❌ Неизвестная команда")
 # =========================
