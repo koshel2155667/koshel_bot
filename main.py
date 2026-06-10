@@ -1654,7 +1654,7 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # 15. ТЕКСТОВЫЕ КНОПКИ
 # =========================
 
-  async def text_button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def text_button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     text = update.message.text.strip()
     print(f"DEBUG: '{text}'")
