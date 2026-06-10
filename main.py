@@ -584,6 +584,17 @@ async def quests(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def balance_history(update: Update, context: ContextTypes.DEFAULT_TYPE):
     pass
+async def admin_panel(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
+
+    if user_id not in ADMIN_IDS:
+        await update.message.reply_text("⛔ Нет доступа")
+        return
+
+    await update.message.reply_text(
+        "🔧 Админ панель",
+        reply_markup=get_admin_keyboard()
+    )
 # =========================
 # 9. ДРУЗЬЯ
 # =========================
@@ -1513,9 +1524,44 @@ async def text_button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE
     text = update.message.text.strip()
 
     # =========================
-    # РЕЖИМЫ ВВОДА (приоритет)
+    # ADMIN ACTION MODE
     # =========================
+    if context.user_data.get("admin_action"):
 
+        action = context.user_data["admin_action"]
+
+        if action == "give_money":
+            target_id, amount = map(int, text.split())
+            await update.message.reply_text("✅ Выдано")
+            context.user_data["admin_action"] = None
+            return
+
+        if action == "take_money":
+            target_id, amount = map(int, text.split())
+            await update.message.reply_text("💸 Списано")
+            context.user_data["admin_action"] = None
+            return
+
+        if action == "ban":
+            target_id = int(text)
+            await update.message.reply_text("🚫 Забанен")
+            context.user_data["admin_action"] = None
+            return
+
+        if action == "unban":
+            target_id = int(text)
+            await update.message.reply_text("✅ Разбанен")
+            context.user_data["admin_action"] = None
+            return
+
+        if action == "broadcast":
+            await update.message.reply_text("📢 Рассылка отправлена")
+            context.user_data["admin_action"] = None
+            return
+
+    # =========================
+    # РЕЖИМЫ ВВОДА
+    # =========================
     if context.user_data.get("adding_friend"):
         await handle_add_friend(update, context)
         return
@@ -1535,7 +1581,6 @@ async def text_button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE
     # =========================
     # ГЛАВНОЕ МЕНЮ
     # =========================
-
     if text == "🏒 Матчи":
         await matches(update, context)
         return
@@ -1564,10 +1609,6 @@ async def text_button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE
         await balance_history(update, context)
         return
 
-    # =========================
-    # ДРУЗЬЯ / АДМИН СВЯЗЬ
-    # =========================
-
     if text == "➕ Добавить друга":
         await add_friend(update, context)
         return
@@ -1583,7 +1624,6 @@ async def text_button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE
     # =========================
     # АДМИН КНОПКИ
     # =========================
-
     if user_id in ADMIN_IDS:
 
         if text == "🔧 Админ панель":
@@ -1598,34 +1638,41 @@ async def text_button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE
             await admin_stats(update, context)
             return
 
-        if text == "📨 Сообщения":
-            await admin_messages(update, context)
+        if text == "💰 Выдать деньги":
+            context.user_data["admin_action"] = "give_money"
+            await update.message.reply_text("Введите: ID СУММА")
             return
 
-        if text == "🏒 Создать матч":
-            await update.message.reply_text("Используй: /create_match команда1 команда2")
+        if text == "💸 Списать деньги":
+            context.user_data["admin_action"] = "take_money"
+            await update.message.reply_text("Введите: ID СУММА")
             return
 
-        if text == "🏁 Завершить матч":
-            await admin_end_match(update, context)
+        if text == "🚫 Забанить":
+            context.user_data["admin_action"] = "ban"
+            await update.message.reply_text("Введите ID")
             return
 
-        if text == "🎫 Промокоды":
-            await admin_promocodes(update, context)
+        if text == "✅ Разбанить":
+            context.user_data["admin_action"] = "unban"
+            await update.message.reply_text("Введите ID")
             return
 
         if text == "📢 Рассылка":
-            await admin_broadcast(update, context)
+            context.user_data["admin_action"] = "broadcast"
+            await update.message.reply_text("Введите текст рассылки")
             return
 
-        if text == "🔙 В меню":
-            await menu(update, context)
+        if text == "🔙 В главное меню":
+            await update.message.reply_text(
+                "🏠 Меню",
+                reply_markup=get_main_keyboard(user_id)
+            )
             return
 
     # =========================
-    # НЕИЗВЕСТНАЯ КНОПКА
+    # FALLBACK
     # =========================
-
     await update.message.reply_text("❌ Неизвестная команда")
 # =========================
 # 16. MAIN
