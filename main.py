@@ -14,7 +14,7 @@ ADMIN_IDS = [1205576607]  # Вставьте ваш ID
 # Экономика
 CURRENCY = "🏒  Шайбочки"
 START_BALANCE = 1000
-BONUS_INTERVAL = 7200
+BONUS_INTERVAL = 18000
 BONUS_MIN = 500
 BONUS_MAX = 5000
 # Реферальная система
