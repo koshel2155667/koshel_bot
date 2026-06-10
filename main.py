@@ -785,7 +785,7 @@ async def admin_end_match(update: Update, context: ContextTypes.DEFAULT_TYPE):
         for bet in bets:
             bet_id, bet_user_id, bet_choice, amount, odds, potential = bet
             win = False
-            if result == 'П1' and bet_choice == 'p1':
+if result == 'П1' and bet_choice == 'p1':
     win = True
 elif bet_choice == 'p2' and result == "П2":
     win = True
