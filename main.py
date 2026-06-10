@@ -738,7 +738,7 @@ async def admin_create_match(update: Update, context: ContextTypes.DEFAULT_TYPE)
 # ========== АДМИН: ЗАВЕРШИТЬ МАТЧ ==========
 # ... предыдущий код ...
 
-async def admin_end_match_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def admin_end_match(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     if user_id not in ADMIN_IDS:
         await update.message.reply_text("⛔ Доступ запрещен")
