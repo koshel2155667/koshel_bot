@@ -191,7 +191,7 @@ def format_match_row(m):
     return f"🏒 {m[1]} vs {m[2]} | П1: {m[3]} П2: {m[4]} ТБ: {m[5]} ТМ: {m[6]} ОЗ: {m[7]}"
 
 def add_balance_history(user_id, amount, reason, db):
-    db.execute("INSERT INTO balance_history (user_id, amount, reason, created_at) VALUES (?, ?, ?, ?)",
+    db.execute;("INSERT INTO balance_history (user_id, amount, reason, created_at) VALUES (?, ?, ?, ?)",
                (user_id, amount, reason, int(time.time())))
 
 # ========== ОБРАБОТЧИКИ ==========
