@@ -785,16 +785,29 @@ async def admin_end_match(update: Update, context: ContextTypes.DEFAULT_TYPE):
         for bet in bets:
             bet_id, bet_user_id, bet_choice, amount, odds, potential = bet
             win = False
-if result == 'П1' and bet_choice == 'p1':
-    win = True
-elif bet_choice == 'p2' and result == "П2":
-    win = True
-elif bet_choice == 'tb' and result == "ТБ":
-    win = True
-elif bet_choice == 'tm' and result == "ТМ":
-    win = True
-elif bet_choice == 'ob' and result == "ОБ":
-    win = True
+for bet in bets:
+    bet_id, bet_user_id, bet_choice, amount, odds, potential = bet
+    win = False
+    
+    # Определяем выигрыш
+    if result == 'П1' and bet_choice == 'p1':
+        win = True
+    elif bet_choice == 'p2' and result == "П2":
+        win = True
+    elif bet_choice == 'tb' and result == "ТБ":
+        win = True
+    elif bet_choice == 'tm' and result == "ТМ":
+        win = True
+    elif bet_choice == 'ob' and result == "ОБ":
+        win = True
+    
+    if win:
+        db.execute("UPDATE bets SET status = 'won', settled_at = ? WHERE id = ?", (int(time.time()), bet_id))
+        db.execute("UPDATE users SET balance = balance + ?, wins = wins + 1 WHERE user_id = ?", (potential, bet_user_id))
+        win_count += 1
+    else:
+        db.execute("UPDATE bets SET status = 'lost', settled_at = ? WHERE id = ?", (int(time.time()), bet_id))
+        db.execute("UPDATE users SET losses = losses + 1 WHERE user_id = ?", (bet_user_id,))
 async def admin_end_match(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     if user_id not in ADMIN_IDS:
