@@ -741,164 +741,91 @@ async def admin_end_match(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if user_id not in ADMIN_IDS:
         await update.message.reply_text("⛔ Доступ запрещен")
         return
-    try:
-        text = update.message.text
-        parts = text.split(' ', 1)
-        if len(parts) < 2:
-            await update.message.reply_text("❌ Формат: /end_match <id> <счёт>", reply_markup=get_admin_keyboard())
-            return
-        args = parts[1].split()
-        if len(args) < 2:
-            await update.message.reply_text("❌ Формат: /end_match <id> <счёт>", reply_markup=get_admin_keyboard())
-            return
-        match_id = int(args[0])
-        score = args[1]
-        if ':' not in score:
-            await update.message.reply_text("❌ Введите счёт в формате 2:1", reply_markup=get_admin_keyboard())
-            return
-        score1, score2 = map(int, score.split(':'))
-        db = Database()
-        match = db.fetchone("SELECT id FROM matches WHERE id = ?", (match_id,))
-        if not match:
-            await update.message.reply_text("❌ Матч не найден", reply_markup=get_admin_keyboard())
-            return
-        # Определяем результаты
-        result = ""
-        if score1 > score2:
-            result = "П1"
-        elif score2 > score1:
-            result = "П2"
-        else:
-            result = "НИЧЬЯ"
-        total = score1 + score2
-        if total > 5:
-            result_tb = "ТБ"
-        else:
-            result_tb = "ТМ"
-        if score1 > 0 and score2 > 0:
-            result_ob = "ОБ"
-        else:
-            result_ob = "НЕТ"
-            db.execute("UPDATE matches SET status = 'finished', result = ? WHERE id = ?", (result, match_id))
-        
-        try:
-            bets = db.fetchall("SELECT id, user_id, bet_choice, amount, odds, potential_win FROM bets WHERE match_id = ? AND status = 'pending'", (match_id,))
-            win_count = 0
-            for bet in bets:
-                bet_id, bet_user_id, bet_choice, amount, odds, potential = bet
-                win = False
-                
-                # Определяем выигрыш
-                if result == 'П1' and bet_choice == 'p1':
-                    win = True
-                elif bet_choice == 'p2' and result == "П2":
-                    win = True
-                elif bet_choice == 'tb' and result == "ТБ":
-                    win = True
-                elif bet_choice == 'tm' and result == "ТМ":
-                    win = True
-                elif bet_choice == 'ob' and result == "ОБ":
-                    win = True
-                
-                if win:
-                    db.execute("UPDATE bets SET status = 'won', settled_at = ? WHERE id = ?", (int(time.time()), bet_id))
-                    db.execute("UPDATE users SET balance = balance + ?, wins = wins + 1 WHERE user_id = ?", (potential, bet_user_id))
-                    win_count += 1
-                else:
-                    db.execute("UPDATE bets SET status = 'lost', settled_at = ? WHERE id = ?", (int(time.time()), bet_id))
-                    db.execute("UPDATE users SET losses = losses + 1 WHERE user_id = ?", (bet_user_id,))
-        except Exception as e:
-            print(f"Ошибка при обработке ставок: {e}")
-            await update.message.reply_text(f"❌ Ошибка при обработке ставок: {str(e)}")
-    
-    if win:
-        db.execute("UPDATE bets SET status = 'won', settled_at = ? WHERE id = ?", (int(time.time()), bet_id))
-        db.execute("UPDATE users SET balance = balance + ?, wins = wins + 1 WHERE user_id = ?", (potential, bet_user_id))
-        win_count += 1
-    else:
-        db.execute("UPDATE bets SET status = 'lost', settled_at = ? WHERE id = ?", (int(time.time()), bet_id))
-        db.execute("UPDATE users SET losses = losses + 1 WHERE user_id = ?", (bet_user_id,))
-async def admin_end_match(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_id = update.effective_user.id
-    if user_id not in ADMIN_IDS:
-        await update.message.reply_text("⛔ Доступ запрещен")
-        return
     db = Database()
     matches = db.fetchall("SELECT id, team1, team2 FROM matches WHERE status = 'active'")
     if not matches:
         await update.message.reply_text("❌ Нет активных матчей", reply_markup=get_admin_keyboard())
         return
-    keyboard = []
+    
+    # ✅ Показываем таблицу активных матчей перед завершением
+    text = "📋 Таблица активных матчей\n\n"
     for m in matches:
-        keyboard.append([InlineKeyboardButton(f"🏒 {m[1]} vs {m[2]}", callback_data=f"end_match_{m[0]}")])
-    keyboard.append([InlineKeyboardButton("🔙 Отмена", callback_data="admin_panel")])
-    reply_markup = InlineKeyboardMarkup(keyboard)
-    await update.message.reply_text("🏒 Выберите матч для завершения:", reply_markup=reply_markup)
+        text += f"#{m[0]} - {m[1]} vs {m[2]} - активен\n"
+    text += "\nВведите команду:\n/end_match <id> <счёт>\n\nПример: /end_match 1 2:1"
+    
+    await update.message.reply_text(text, reply_markup=get_admin_keyboard())
 
-async def end_match_select(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query = update.callback_query
-    await query.answer()
-    match_id = int(query.data.split("_")[2])
-    context.user_data["end_match"] = {"match_id": match_id}
-    keyboard = [
-        [InlineKeyboardButton("П1", callback_data="end_result_П1")],
-        [InlineKeyboardButton("П2", callback_data="end_result_П2")],
-        [InlineKeyboardButton("ТБ", callback_data="end_result_ТБ")],
-        [InlineKeyboardButton("ТМ", callback_data="end_result_ТМ")],
-        [InlineKeyboardButton("Обе забьют", callback_data="end_result_ОБ")],
-        [InlineKeyboardButton("🔙 Отмена", callback_data="admin_panel")]
-    ]
-    reply_markup = InlineKeyboardMarkup(keyboard)
-    await query.edit_message_text("🏒 Выберите результат:", reply_markup=reply_markup)
-
-async def end_result(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query = update.callback_query
-    await query.answer()
-    result = query.data.split("_")[2]
-    data = context.user_data["end_match"]
-    match_id = data["match_id"]
-    db = Database()
-    db.execute("UPDATE matches SET status = 'finished', result = ? WHERE id = ?", (result, match_id))
-    bets = db.fetchall("SELECT id, user_id, bet_choice, amount, odds, potential_win FROM bets WHERE match_id = ? AND status = 'pending'", (match_id,))
-    win_count = 0
-    for bet in bets:
-        bet_id, bet_user_id, bet_choice, amount, odds, potential = bet
-        win = False
-        if result == 'П1' and bet_choice == 'p1':
-            win = True
-        elif result == 'П2' and bet_choice == 'p2':
-            win = True
-        elif result == 'ТБ' and bet_choice == 'tb':
-            win = True
-        elif result == 'ТМ' and bet_choice == 'tm':
-            win = True
-        elif result == 'ОБ' and bet_choice == 'ob':
-            win = True
-        if win:
-            db.execute("UPDATE bets SET status = 'won', settled_at = ? WHERE id = ?", (int(time.time()), bet_id))
-            db.execute("UPDATE users SET balance = balance + ?, wins = wins + 1 WHERE user_id = ?", (potential, bet_user_id))
-            add_balance_history(bet_user_id, potential, f"🏆 Выигрыш в матче #{match_id}", db)
-            win_count += 1
+async def admin_end_match_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
+    if user_id not in ADMIN_IDS:
+        await update.message.reply_text("⛔ Доступ запрещен")
+        return
+    try:
+        text = update.message.text
+        parts = text.split(' ', 2)
+        if len(parts) < 3:
+            await update.message.reply_text("❌ Формат: /end_match <id> <счёт>")
+            return
+        match_id = int(parts[1])
+        score_str = parts[2]
+        
+        # Разбираем счёт
+        try:
+            score1, score2 = map(int, score_str.split(':'))
+        except:
+            await update.message.reply_text("❌ Неверный формат счёта. Используйте '2:1'")
+            return
+        
+        # Определяем результаты для всех типов ставок
+        result = "П1" if score1 > score2 else "П2" if score2 > score1 else "Х"
+        result_tb = "ТБ" if score1 + score2 > 5 else "ТМ"
+        result_ob = "ОБ" if score1 > 0 and score2 > 0 else "НЕТ"
+        
+        db = Database()
+        db.execute("UPDATE matches SET status = 'finished', result = ? WHERE id = ?", (result, match_id))
+        
+        bets = db.fetchall("SELECT id, user_id, bet_choice, amount, odds, potential_win FROM bets WHERE match_id = ? AND status = 'pending'", (match_id,))
+        win_count = 0
+        
+        for bet in bets:
+            bet_id, bet_user_id, bet_choice, amount, odds, potential = bet
+            win = False
+            
+            if bet_choice == 'p1' and result == "П1":
+                win = True
+            elif bet_choice == 'p2' and result == "П2":
+                win = True
+            elif bet_choice == 'tb' and result_tb == "ТБ":
+                win = True
+            elif bet_choice == 'tm' and result_tb == "ТМ":
+                win = True
+            elif bet_choice == 'ob' and result_ob == "ОБ":
+                win = True
+            
+            if win:
+                db.execute("UPDATE bets SET status = 'won', settled_at = ? WHERE id = ?", (int(time.time()), bet_id))
+                db.execute("UPDATE users SET balance = balance + ?, wins = wins + 1 WHERE user_id = ?", (potential, bet_user_id))
+                win_count += 1
+            else:
+                db.execute("UPDATE bets SET status = 'lost', settled_at = ? WHERE id = ?", (int(time.time()), bet_id))
+                db.execute("UPDATE users SET losses = losses + 1 WHERE user_id = ?", (bet_user_id,))
+        
+        # ✅ Обновлённая таблица активных матчей
+        db = Database()
+        matches = db.fetchall("SELECT id, team1, team2 FROM matches WHERE status = 'active'")
+        if matches:
+            text = "📋 Обновлённая таблица активных матчей\n\n"
+            for m in matches:
+                text += f"#{m[0]} - {m[1]} vs {m[2]} - активен\n"
         else:
-            db.execute("UPDATE bets SET status = 'lost', settled_at = ? WHERE id = ?", (int(time.time()), bet_id))
-            db.execute("UPDATE users SET losses = losses + 1 WHERE user_id = ?", (bet_user_id,))
-            add_balance_history(bet_user_id, -amount, f"💔 Проигрыш в матче #{match_id}", db)
-    # ✅ После завершения матча показываем обновлённый список
-    await query.edit_message_text(
-        f"✅ Матч #{match_id} завершен. Результат: {result}. Выиграло {win_count} ставок.",
-        reply_markup=await get_matches_keyboard()
-    )
-    del context.user_data["end_match"]
-    async def get_matches_keyboard():
-    db = Database()
-    matches = db.fetchall("SELECT id, team1, team2 FROM matches WHERE status = 'active'")
-    if not matches:
-        return None
-    keyboard = []
-    for m in matches:
-        keyboard.append([InlineKeyboardButton(f"🏒 {m[1]} vs {m[2]}", callback_data=f"end_match_{m[0]}")])
-    keyboard.append([InlineKeyboardButton("🔙 Отмена", callback_data="admin_panel")])
-    return InlineKeyboardMarkup(keyboard)
+            text = "✅ Все матчи завершены. Активных матчей нет."
+        
+        await update.message.reply_text(
+            f"✅ Матч #{match_id} завершен. Счёт: {score1}:{score2}.\n\n{text}",
+            reply_markup=get_admin_keyboard()
+        )
+    except Exception as e:
+        await update.message.reply_text(f"❌ Ошибка: {str(e)}")
 # ========== АДМИН: ПРОМОКОДЫ ==========
 async def admin_promocodes(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
