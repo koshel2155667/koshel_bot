@@ -22,7 +22,7 @@ REFERRAL_BONUS_HOST = 1000
 REFERRAL_BONUS_FRIEND = 500
 TEAMS = [
     "Автомобилист", "Ак Барс", "Авангард", "Адмирал", "Амур",
-    "Барыс", "Юность", "Динамо Москва", "Динамо Минск", "Норильск",
+    "Барыс", "Юность", "Динамо Мосва", "Динамо Минск", "Норильск",
     "Локомотив", "Металлург", "Нефтехимик", "Салават Юлаев",
     "Северсталь", "Сибирь", "СКА", "Спартак", "Торпедо",
     "Трактор", "ЦСКА", "Сочи", "Шанхайские Драконы", "Лада",
@@ -48,10 +48,10 @@ def get_admin_keyboard():
         [KeyboardButton("🚫 Забанить"), KeyboardButton("✅ Разбанить")],
         [KeyboardButton("🏒 Создать матч"), KeyboardButton("🏒 Завершить матч")],
         [KeyboardButton("🎫 Создать промокод"), KeyboardButton("📢 Рассылка")],
-        [KeyboardButton("📊 Статистика бота"), KeyboardButton("🔙 В главное меню")]
+        [KeyboardButton("📊 Статистика бота"), KeyboardButton("📨 Состояние промокодов")],
+        [KeyboardButton("🔙 В главное меню")]
     ]
     return ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
-
 # ========== БАЗА ДАННЫХ ==========
 class Database:
     def __init__(self, db_path="hockey_bet.db"):
@@ -247,9 +247,9 @@ async def bonus(update: Update, context: ContextTypes.DEFAULT_TYPE):
     db.execute("UPDATE users SET balance = balance + ?, last_bonus_time = ? WHERE user_id = ?",
                (bonus_amount, current_time, user_id))
     add_balance_history(user_id, bonus_amount, "🎁 Бонус", db)
-    # Сообщение о размере бонуса убрано
-    await update.message.reply_text("🎁 Вы получили бонус!")
-    
+    msg = f"🎁 Вы получили бонус: {format_balance(bonus_amount)}!"
+    await update.message.reply_text(msg)
+
 async def matches(update: Update, context: ContextTypes.DEFAULT_TYPE):
     db = Database()
     matches = db.fetchall("SELECT id, team1, team2, odds_p1, odds_p2, odds_tb, odds_tm, odds_ob FROM matches WHERE status = 'active'")
@@ -311,17 +311,20 @@ async def place_bet(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await query.edit_message_text("❌ Неверный тип ставки")
         return
     odds, bet_type = odds_map[bet_choice]
+    # Сохраняем информацию о матче в user_data
+    context.user_data["bet_data"] = {
+        "match_id": match_id,
+        "bet_choice": bet_choice,
+        "bet_type": bet_type,
+        "odds": odds,
+        "team1": match[0],
+        "team2": match[1]
+    }
     await query.edit_message_text(
         f"🏒 {match[0]} vs {match[1]}\n"
         f"Ставка: {bet_type} (кф {odds})\n\n"
         f"Введите сумму ставки (число):"
     )
-    context.user_data["bet_data"] = {
-        "match_id": match_id,
-        "bet_choice": bet_choice,
-        "bet_type": bet_type,
-        "odds": odds
-    }
 
 async def handle_bet_amount(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
@@ -341,6 +344,8 @@ async def handle_bet_amount(update: Update, context: ContextTypes.DEFAULT_TYPE):
     bet_choice = bet_data["bet_choice"]
     bet_type = bet_data["bet_type"]
     odds = bet_data["odds"]
+    team1 = bet_data["team1"]
+    team2 = bet_data["team2"]
     db = Database()
     user = db.fetchone("SELECT balance FROM users WHERE user_id = ?", (user_id,))
     if not user:
@@ -362,25 +367,41 @@ async def handle_bet_amount(update: Update, context: ContextTypes.DEFAULT_TYPE):
     del context.user_data["bet_data"]
     await update.message.reply_text(
         f"✅ Ставка принята!\n\n"
-        f"Матч: {match[0]} vs {match[1]}\n"
+        f"Матч: {team1} vs {team2}\n"
         f"Ставка: {bet_type} (кф {odds})\n"
         f"Сумма: {format_balance(amount)}\n"
         f"Потенциальный выигрыш: {format_balance(potential_win)}"
     )
-
 async def profile(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     db = Database()
     user = db.fetchone("""
-        SELECT username, first_name, last_name, balance, turnover, wins, losses, bets_count, referral_count, registered_at, friends
+        SELECT username, first_name, last_name, balance, turnover, wins, losses, bets_count, referral_count, registered_at
         FROM users WHERE user_id = ?
     """, (user_id,))
+    
     if not user:
         await update.message.reply_text("❌ Вы не зарегистрированы")
         return
-    reg_date = datetime.fromtimestamp(user[10]).strftime("%d.%m.%Y")
+    
+    # user[0] = username
+    # user[1] = first_name
+    # user[2] = last_name
+    # user[3] = balance
+    # user[4] = turnover
+    # user[5] = wins
+    # user[6] = losses
+    # user[7] = bets_count
+    # user[8] = referral_count
+    # user[9] = registered_at
+    
+    reg_date = "Неизвестно"
+    if user[9]:
+        reg_date = datetime.fromtimestamp(user[9]).strftime("%d.%m.%Y")
+    
     total_bets = user[5] + user[6]
     win_percent = round(user[5] / total_bets * 100, 1) if total_bets > 0 else 0
+    
     text = f"👤 Профиль\n\n"
     text += f"ID: {user_id}\n"
     text += f"Имя: {user[1] or 'Не указано'} {user[2] or ''}\n"
@@ -392,49 +413,24 @@ async def profile(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text += f"📊 Всего ставок: {user[7]}\n"
     text += f"📈 Процент побед: {win_percent}%\n"
     text += f"👥 Приглашено: {user[8]}\n"
-    text += f"👥 Друзья: {user[11] or 'Нет'}\n"
+    
     await update.message.reply_text(text, reply_markup=get_main_keyboard(user_id))
-
-# ========== ДОБАВЛЕНИЕ ДРУГА ==========
-async def add_friend(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def promo_status(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
-    context.user_data["adding_friend"] = True
-    await update.message.reply_text("👤 Введите ID друга (число):")
-
-async def handle_add_friend(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_id = update.effective_user.id
-    if "adding_friend" not in context.user_data:
+    if user_id not in ADMIN_IDS:
+        await update.message.reply_text("⛔ Доступ запрещен")
         return
-    text = update.message.text.strip()
-    try:
-        friend_id = int(text)
-        if friend_id == user_id:
-            await update.message.reply_text("❌ Нельзя добавить себя в друзья")
-            del context.user_data["adding_friend"]
-            return
-        db = Database()
-        user = db.fetchone("SELECT user_id FROM users WHERE user_id = ?", (friend_id,))
-        if not user:
-            await update.message.reply_text("❌ Пользователь с таким ID не найден")
-            del context.user_data["adding_friend"]
-            return
-        current = db.fetchone("SELECT friends FROM users WHERE user_id = ?", (user_id,))
-        if current and current[0]:
-            friends_list = current[0].split(',')
-            if str(friend_id) in friends_list:
-                await update.message.reply_text("❌ Этот пользователь уже у вас в друзьях")
-                del context.user_data["adding_friend"]
-                return
-            new_friends = current[0] + ',' + str(friend_id)
-        else:
-            new_friends = str(friend_id)
-        db.execute("UPDATE users SET friends = ? WHERE user_id = ?", (new_friends, user_id))
-        await update.message.reply_text(f"✅ Пользователь {friend_id} добавлен в друзья!")
-    except Exception as e:
-        await update.message.reply_text(f"❌ Ошибка: {str(e)}")
-    finally:
-        if "adding_friend" in context.user_data:
-            del context.user_data["adding_friend"]
+    db = Database()
+    promos = db.fetchall("SELECT code, reward_type, reward_value, max_uses, used_count, is_active FROM promocodes ORDER BY code")
+    text = "📨 Состояние промокодов\n\n"
+    for p in promos:
+        status = "✅ Активен" if p[5] else "❌ Неактивен"
+        text += f"Код: {p[0]}\n"
+        text += f"Тип: {p[1]}, Значение: {p[2]}\n"
+        text += f"Использовано: {p[4]} / {p[3]}\n"
+        text += f"Статус: {status}\n\n"
+    await update.message.reply_text(text, reply_markup=get_admin_keyboard())
+# ========== ДОБАВЛЕНИЕ ДРУГА ==========
 
 # ========== СВЯЗЬ С АДМИНОМ ==========
 async def contact_admin(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -715,8 +711,7 @@ async def admin_unban(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except Exception as e:
         await update.message.reply_text(f"❌ Ошибка: {str(e)}", reply_markup=get_admin_keyboard())
 
-# ========== АДМИН: СОЗДАТЬ МАТЧ (ТЕКСТОВЫЙ ВВОД) ==========
-# ========== АДМИН: СОЗДАТЬ МАТЧ (ТЕКСТОВЫЙ ВВОД) ==========
+# ========== АДМИН: СОЗДАТЬ МАТЧ (ФИКСИРОВАННЫЕ КОЭФФИЦИЕНТЫ) ==========
 async def admin_create_match(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     if user_id not in ADMIN_IDS:
@@ -726,36 +721,20 @@ async def admin_create_match(update: Update, context: ContextTypes.DEFAULT_TYPE)
         text = update.message.text
         parts = text.split(' ', 1)
         if len(parts) < 2:
-            await update.message.reply_text("❌ Формат: /create_match Команда1 vs Команда2 кф1 кф2 кфТБ кфТМ кфОЗ")
+            await update.message.reply_text("❌ Формат: /create_match Команда1 vs Команда2")
             return
         match_text = parts[1]
         if ' vs ' not in match_text:
             await update.message.reply_text("❌ Используйте ' vs ' для разделения команд")
             return
-        parts2 = match_text.split(' vs ')
-        if len(parts2) < 2:
-            await update.message.reply_text("❌ Ошибка формата")
-            return
-        team1 = parts2[0].strip()
-        rest = parts2[1].strip().split()
-        if len(rest) < 6:
-            await update.message.reply_text("❌ Укажите все 5 коэффициентов через пробел после команды 2")
-            return
-        team2 = rest[0]
-        odds_p1 = float(rest[1])
-        odds_p2 = float(rest[2])
-        odds_tb = float(rest[3])
-        odds_tm = float(rest[4])
-        odds_ob = float(rest[5])
+        team1, team2 = match_text.split(' vs ', 1)
         db = Database()
-        db.execute("""
-            INSERT INTO matches (team1, team2, odds_p1, odds_p2, odds_tb, odds_tm, odds_ob, created_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-        """, (team1, team2, odds_p1, odds_p2, odds_tb, odds_tm, odds_ob, int(time.time())))
-        await update.message.reply_text(f"✅ Матч создан: {team1} vs {team2}\nКоэффициенты: П1={odds_p1} П2={odds_p2} ТБ={odds_tb} ТМ={odds_tm} ОЗ={odds_ob}")
+        db.execute("INSERT INTO matches (team1, team2, created_at) VALUES (?, ?, ?)",
+                   (team1.strip(), team2.strip(), int(time.time())))
+        await update.message.reply_text(f"✅ Матч создан: {team1} vs {team2}")
     except Exception as e:
         await update.message.reply_text(f"❌ Ошибка: {str(e)}")
-# ========== АДМИН: ЗАВЕРШИТЬ МАТЧ ==========
+
 async def admin_end_match(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     if user_id not in ADMIN_IDS:
@@ -766,67 +745,90 @@ async def admin_end_match(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not matches:
         await update.message.reply_text("❌ Нет активных матчей", reply_markup=get_admin_keyboard())
         return
-    keyboard = []
+    text = "📋 Список активных матчей для завершения\n\n"
     for m in matches:
-        keyboard.append([InlineKeyboardButton(f"🏒 {m[1]} vs {m[2]}", callback_data=f"end_match_{m[0]}")])
-    keyboard.append([InlineKeyboardButton("🔙 Отмена", callback_data="admin_panel")])
-    reply_markup = InlineKeyboardMarkup(keyboard)
-    await update.message.reply_text("🏒 Выберите матч для завершения:", reply_markup=reply_markup)
-
-async def end_match_select(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query = update.callback_query
-    await query.answer()
-    match_id = int(query.data.split("_")[2])
-    context.user_data["end_match"] = {"match_id": match_id}
-    keyboard = [
-        [InlineKeyboardButton("П1", callback_data="end_result_П1")],
-        [InlineKeyboardButton("П2", callback_data="end_result_П2")],
-        [InlineKeyboardButton("ТБ", callback_data="end_result_ТБ")],
-        [InlineKeyboardButton("ТМ", callback_data="end_result_ТМ")],
-        [InlineKeyboardButton("Обе забьют", callback_data="end_result_ОБ")],
-        [InlineKeyboardButton("🔙 Отмена", callback_data="admin_panel")]
-    ]
-    reply_markup = InlineKeyboardMarkup(keyboard)
-    await query.edit_message_text("🏒 Выберите результат:", reply_markup=reply_markup)
-
-async def end_result(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query = update.callback_query
-    await query.answer()
-    result = query.data.split("_")[2]
-    data = context.user_data["end_match"]
-    match_id = data["match_id"]
-    db = Database()
-    db.execute("UPDATE matches SET status = 'finished', result = ? WHERE id = ?", (result, match_id))
-    bets = db.fetchall("SELECT id, user_id, bet_choice, amount, odds, potential_win FROM bets WHERE match_id = ? AND status = 'pending'", (match_id,))
-    win_count = 0
-    for bet in bets:
-        bet_id, bet_user_id, bet_choice, amount, odds, potential = bet
-        win = False
-        if result == 'П1' and bet_choice == 'p1':
-            win = True
-        elif result == 'П2' and bet_choice == 'p2':
-            win = True
-        elif result == 'ТБ' and bet_choice == 'tb':
-            win = True
-        elif result == 'ТМ' and bet_choice == 'tm':
-            win = True
-        elif result == 'ОБ' and bet_choice == 'ob':
-            win = True
-        if win:
-            db.execute("UPDATE bets SET status = 'won', settled_at = ? WHERE id = ?", (int(time.time()), bet_id))
-            db.execute("UPDATE users SET balance = balance + ?, wins = wins + 1 WHERE user_id = ?", (potential, bet_user_id))
-            add_balance_history(bet_user_id, potential, f"🏆 Выигрыш в матче #{match_id}", db)
-            win_count += 1
+        text += f"#{m[0]} - {m[1]} vs {m[2]} - активен\n"
+    text += "\nВведите команду:\n/end_match <id> <счёт>"
+    await update.message.reply_text(text, reply_markup=get_admin_keyboard())
+async def admin_end_match_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
+    if user_id not in ADMIN_IDS:
+        await update.message.reply_text("⛔ Доступ запрещен")
+        return
+    try:
+        text = update.message.text
+        parts = text.split(' ', 1)
+        if len(parts) < 2:
+            await update.message.reply_text("❌ Формат: /end_match <id> <счёт>", reply_markup=get_admin_keyboard())
+            return
+        args = parts[1].split()
+        if len(args) < 2:
+            await update.message.reply_text("❌ Формат: /end_match <id> <счёт>", reply_markup=get_admin_keyboard())
+            return
+        match_id = int(args[0])
+        score = args[1]
+        if ':' not in score:
+            await update.message.reply_text("❌ Введите счёт в формате 2:1", reply_markup=get_admin_keyboard())
+            return
+        score1, score2 = map(int, score.split(':'))
+        db = Database()
+        match = db.fetchone("SELECT id FROM matches WHERE id = ?", (match_id,))
+        if not match:
+            await update.message.reply_text("❌ Матч не найден", reply_markup=get_admin_keyboard())
+            return
+        result = ""
+        if score1 > score2:
+            result = "П1"
+        elif score2 > score1:
+            result = "П2"
         else:
-            db.execute("UPDATE bets SET status = 'lost', settled_at = ? WHERE id = ?", (int(time.time()), bet_id))
-            db.execute("UPDATE users SET losses = losses + 1 WHERE user_id = ?", (bet_user_id,))
-            add_balance_history(bet_user_id, -amount, f"💔 Проигрыш в матче #{match_id}", db)
-    await query.edit_message_text(
-        f"✅ Матч #{match_id} завершен. Результат: {result}. Выиграло {win_count} ставок.",
-        reply_markup=get_admin_keyboard()
-    )
-    del context.user_data["end_match"]
-
+            result = "НИЧЬЯ"
+        total = score1 + score2
+        if total > 5:
+            result_tb = "ТБ"
+        else:
+            result_tb = "ТМ"
+        if score1 > 0 and score2 > 0:
+            result_ob = "ОБ"
+        else:
+            result_ob = "НЕТ"
+        db.execute("UPDATE matches SET status = 'finished', result = ? WHERE id = ?", (result, match_id))
+        bets = db.fetchall("SELECT id, user_id, bet_choice, amount, odds, potential_win FROM bets WHERE match_id = ? AND status = 'pending'", (match_id,))
+        win_count = 0
+        for bet in bets:
+            bet_id, bet_user_id, bet_choice, amount, odds, potential = bet
+            win = False
+            if bet_choice == 'p1' and result == "П1":
+                win = True
+            elif bet_choice == 'p2' and result == "П2":
+                win = True
+            elif bet_choice == 'tb' and result_tb == "ТБ":
+                win = True
+            elif bet_choice == 'tm' and result_tm == "ТМ":
+                win = True
+            elif bet_choice == 'ob' and result_ob == "ОБ":
+                win = True
+            if win:
+                db.execute("UPDATE bets SET status = 'won', settled_at = ? WHERE id = ?", (int(time.time()), bet_id))
+                db.execute("UPDATE users SET balance = balance + ?, wins = wins + 1 WHERE user_id = ?", (potential, bet_user_id))
+                add_balance_history(bet_user_id, potential, f"🏆 Выигрыш в матче #{match_id}", db)
+                win_count += 1
+            else:
+                db.execute("UPDATE bets SET status = 'lost', settled_at = ? WHERE id = ?", (int(time.time()), bet_id))
+                db.execute("UPDATE users SET losses = losses + 1 WHERE user_id = ?", (bet_user_id,))
+                add_balance_history(bet_user_id, -amount, f"💔 Проигрыш в матче #{match_id}", db)
+        await update.message.reply_text(
+            f"✅ Матч #{match_id} завершен.\nСчёт: {score}\n"
+            f"Результат: {result}\n"
+            f"Тотал: {result_tb}\n"
+            f"Обе забьют: {result_ob}\n"
+            f"Выиграло {win_count} ставок.",
+            reply_markup=get_admin_keyboard()
+        )
+    except Exception as e:
+        await update.message.reply_text(f"❌ Ошибка: {str(e)}", reply_markup=get_admin_keyboard())
+    except Exception as e:
+        await update.message.reply_text(f"❌ Ошибка: {str(e)}", reply_markup=get_admin_keyboard())
 # ========== АДМИН: ПРОМОКОДЫ ==========
 async def admin_promocodes(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
@@ -1017,22 +1019,32 @@ async def balance_history(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def text_button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     text = update.message.text
+    print(f"DEBUG: Получен текст: '{text}'")
+    # ====== ПРОВЕРКИ РЕЖИМОВ ======
     
-    # Если пользователь в режиме добавления друга
-    if "adding_friend" in context.user_data:
-        await handle_add_friend(update, context)
+    # Если пользователь в режиме ставки
+    if "bet_data" in context.user_data:
+        await handle_bet_amount(update, context)
         return
+
     
     # Если пользователь в режиме связи с админом
     if "contacting_admin" in context.user_data:
         await handle_contact_admin(update, context)
         return
-    
+
     # Если пользователь вводит промокод
     if "entering_promo" in context.user_data:
         await use_promo(update, context)
         return
-    
+# ===== ДОБАВЬТЕ ЭТОТ БЛОК =====
+# Если пользователь вводит сумму ставки
+    if "bet_data" in context.user_data:
+        await handle_bet_amount(update, context)
+        return
+# =============================
+
+ 
     # Если пользователь в процессе создания матча (коэффициенты)
     if "match_creation" in context.user_data:
         step = context.user_data["match_creation"]["step"]
@@ -1051,12 +1063,15 @@ async def text_button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE
         elif step == "odds_ob":
             await handle_match_odds_ob(update, context)
             return
-    
-    # ✅ Если пользователь вводит сумму ставки
-    if "bet_data" in context.user_data:
-        await handle_bet_amount(update, context)
+
+    # Если текст содержит ' vs ' и пользователь админ
+    if user_id in ADMIN_IDS and ' vs ' in text and not text.startswith('/'):
+        # Создаём искусственную команду
+        fake_message = update.message
+        fake_message.text = f"/create_match {text}"
+        await admin_create_match(update, context)
         return
-    
+
     # Обычные кнопки
     if text == "🏒 Матчи":
         await matches(update, context)
@@ -1072,8 +1087,6 @@ async def text_button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE
         await quests(update, context)
     elif text == "📨 Связаться с админом":
         await contact_admin(update, context)
-    elif text == "➕ Добавить друга":
-        await add_friend(update, context)
     elif text == "📊 История баланса":
         await balance_history(update, context)
     elif text == "🎫 Промокод":
@@ -1103,6 +1116,8 @@ async def text_button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE
         await admin_stats(update, context)
     elif text == "🔙 В главное меню" and user_id in ADMIN_IDS:
         await update.message.reply_text("Главное меню", reply_markup=get_main_keyboard(user_id))
+    elif text == "📨 Состояние промокодов" and user_id in ADMIN_IDS:
+        await promo_status(update, context)
     else:
         await update.message.reply_text("Используйте кнопки ниже.", reply_markup=get_main_keyboard(user_id))
 # ========== ОБРАБОТЧИК ПРОМОКОДОВ ==========
