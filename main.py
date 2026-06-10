@@ -1524,7 +1524,7 @@ async def text_button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE
     text = update.message.text.strip()
 
     # =========================
-    # 1. ADMIN ACTION MODE
+    # 1. ADMIN ACTION MODE (ПРИОРИТЕТ №1)
     # =========================
     if context.user_data.get("admin_action"):
 
@@ -1533,47 +1533,44 @@ async def text_button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE
         try:
             if action == "give_money":
                 target_id, amount = map(int, text.split())
-                # TODO: логика выдачи денег
+                # TODO: Database.add_balance(target_id, amount)
                 await update.message.reply_text("✅ Выдано")
+                context.user_data["admin_action"] = None
+                return
 
-            elif action == "take_money":
+            if action == "take_money":
                 target_id, amount = map(int, text.split())
-                # TODO: логика списания денег
+                # TODO: Database.remove_balance(target_id, amount)
                 await update.message.reply_text("💸 Списано")
+                context.user_data["admin_action"] = None
+                return
 
-            elif action == "ban":
+            if action == "ban":
                 target_id = int(text)
-                # TODO: бан
+                # TODO: Database.ban_user(target_id)
                 await update.message.reply_text("🚫 Забанен")
+                context.user_data["admin_action"] = None
+                return
 
-            elif action == "unban":
+            if action == "unban":
                 target_id = int(text)
-                # TODO: разбан
+                # TODO: Database.unban_user(target_id)
                 await update.message.reply_text("✅ Разбанен")
+                context.user_data["admin_action"] = None
+                return
 
-            elif action == "broadcast":
-                # TODO: рассылка
+            if action == "broadcast":
+                # TODO: broadcast_all(text)
                 await update.message.reply_text("📢 Рассылка отправлена")
+                context.user_data["admin_action"] = None
+                return
 
         except Exception:
-            await update.message.reply_text("❌ Ошибка ввода. Проверь формат")
-
-        finally:
-            context.user_data["admin_action"] = None
+            await update.message.reply_text("❌ Ошибка формата ввода")
             return
 
     # =========================
-    # 2. BET MODE
-    # =========================
-    if context.user_data.get("bet"):
-        try:
-            await handle_bet_amount(update, context)
-        except Exception:
-            await update.message.reply_text("❌ Ошибка ставки")
-        return
-
-    # =========================
-    # 3. OTHER MODES
+    # 2. РЕЖИМЫ ВВОДА (ВТОРОЙ ПРИОРИТЕТ)
     # =========================
     if context.user_data.get("adding_friend"):
         await handle_add_friend(update, context)
@@ -1587,8 +1584,12 @@ async def text_button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE
         await use_promo(update, context)
         return
 
+    if context.user_data.get("bet"):
+        await handle_bet_amount(update, context)
+        return
+
     # =========================
-    # 4. MAIN MENU
+    # 3. ГЛАВНОЕ МЕНЮ
     # =========================
     if text == "🏒 Матчи":
         await matches(update, context)
@@ -1618,6 +1619,9 @@ async def text_button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE
         await balance_history(update, context)
         return
 
+    # =========================
+    # 4. ДОП КНОПКИ
+    # =========================
     if text == "➕ Добавить друга":
         await add_friend(update, context)
         return
@@ -1631,7 +1635,7 @@ async def text_button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE
         return
 
     # =========================
-    # 5. ADMIN MENU
+    # 5. АДМИН КНОПКИ (ВАЖНО: ТОЛЬКО ЕСЛИ ADMIN)
     # =========================
     if user_id in ADMIN_IDS:
 
@@ -1674,8 +1678,8 @@ async def text_button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE
 
         if text == "🔙 В главное меню":
             await update.message.reply_text(
-                "🏠 Меню",
-                reply_markup=get_main_keyboard(user_id)
+                "🏠 Главное меню",
+                reply_markup=get_main_keyboard()
             )
             return
 
