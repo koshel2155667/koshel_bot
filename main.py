@@ -993,105 +993,71 @@ async def balance_history(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def text_button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     text = update.message.text
-    print(f"DEBUG: Получен текст: '{text}'")
-    # ====== ПРОВЕРКИ РЕЖИМОВ ======
     
-    # Если пользователь в режиме ставки
-    if "bet_data" in context.user_data:
-        await handle_bet_amount(update, context)
+    # Если пользователь в режиме добавления друга
+    if "adding_friend" in context.user_data:
+        await handle_add_friend(update, context)
         return
-
     
     # Если пользователь в режиме связи с админом
     if "contacting_admin" in context.user_data:
         await handle_contact_admin(update, context)
         return
-
+    
     # Если пользователь вводит промокод
     if "entering_promo" in context.user_data:
         await use_promo(update, context)
         return
-# ===== ДОБАВЬТЕ ЭТОТ БЛОК =====
-# Если пользователь вводит сумму ставки
-    if "bet_data" in context.user_data:
-        await handle_bet_amount(update, context)
-        return
-# =============================
-
- 
-    # Если пользователь в процессе создания матча (коэффициенты)
-    if "match_creation" in context.user_data:
-        step = context.user_data["match_creation"]["step"]
-        if step == "odds_p1":
-            await handle_match_odds_p1(update, context)
-            return
-        elif step == "odds_p2":
-            await handle_match_odds_p2(update, context)
-            return
-        elif step == "odds_tb":
-            await handle_match_odds_tb(update, context)
-            return
-        elif step == "odds_tm":
-            await handle_match_odds_tm(update, context)
-            return
-        elif step == "odds_ob":
-            await handle_match_odds_ob(update, context)
-            return
-
-    # Если текст содержит ' vs ' и пользователь админ
-    if user_id in ADMIN_IDS and ' vs ' in text and not text.startswith('/'):
-        # Создаём искусственную команду
-        fake_message = update.message
-        fake_message.text = f"/create_match {text}"
-        await admin_create_match(update, context)
-        return
-
-    # Обычные кнопки
+    
+    # Обработка кнопок
     if text == "🏒 Матчи":
         await matches(update, context)
+        return
     elif text == "🎁 Бонус":
         await bonus(update, context)
+        return
     elif text == "👤 Профиль":
         await profile(update, context)
+        return
     elif text == "🏆 Топ":
         await top(update, context)
+        return
     elif text == "📊 Статистика":
         await stats(update, context)
+        return
     elif text == "🎯 Квесты":
         await quests(update, context)
+        return
     elif text == "📨 Связаться с админом":
         await contact_admin(update, context)
+        return
+    elif text == "➕ Добавить друга":
+        await add_friend(update, context)
+        return
     elif text == "📊 История баланса":
         await balance_history(update, context)
+        return
     elif text == "🎫 Промокод":
         await promo_button_handler(update, context)
+        return
     elif text == "🔧 Админ панель" and user_id in ADMIN_IDS:
         await admin_panel(update, context)
+        return
     elif text == "👥 Список пользователей" and user_id in ADMIN_IDS:
         await admin_users(update, context)
+        return
     elif text == "💳 Выдать деньги" and user_id in ADMIN_IDS:
         await update.message.reply_text("Введите: /give_money id сумма", reply_markup=get_admin_keyboard())
+        return
     elif text == "💳 Списать деньги" and user_id in ADMIN_IDS:
         await update.message.reply_text("Введите: /take_money id сумма", reply_markup=get_admin_keyboard())
+        return
     elif text == "🚫 Забанить" and user_id in ADMIN_IDS:
         await update.message.reply_text("Введите: /ban id", reply_markup=get_admin_keyboard())
+        return
     elif text == "✅ Разбанить" and user_id in ADMIN_IDS:
         await update.message.reply_text("Введите: /unban id", reply_markup=get_admin_keyboard())
-    elif text == "🏒 Создать матч" and user_id in ADMIN_IDS:
-        await admin_create_match(update, context)
         return
-    elif text == "🏒 Завершить матч" and user_id in ADMIN_IDS:
-        await admin_end_match(update, context)
-    elif text == "🎫 Создать промокод" and user_id in ADMIN_IDS:
-        await admin_promocodes(update, context)
-    elif text == "📢 Рассылка" and user_id in ADMIN_IDS:
-        await admin_broadcast(update, context)
-    elif text == "📊 Статистика бота" and user_id in ADMIN_IDS:
-        await admin_stats(update, context)
-    elif text == "🔙 В главное меню" and user_id in ADMIN_IDS:
-        await update.message.reply_text("Главное меню", reply_markup=get_main_keyboard(user_id))
-    elif text == "📨 Состояние промокодов" and user_id in ADMIN_IDS:
-        await promo_status(update, context)
     else:
         await update.message.reply_text("Используйте кнопки ниже.", reply_markup=get_main_keyboard(user_id))
 # ========== ОБРАБОТЧИК ПРОМОКОДОВ ==========
