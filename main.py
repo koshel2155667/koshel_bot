@@ -1043,6 +1043,12 @@ async def text_button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE
     elif text == "🎫 Промокод":
         await promo_button_handler(update, context)
         return
+    elif text == "🏒 Создать матч" and user_id in ADMIN_IDS:
+        await admin_create_match(update, context)
+        return
+    elif text == "🏒 Завершить матч" and user_id in ADMIN_IDS:
+        await admin_end_match(update, context)
+        return
     elif text == "🔧 Админ панель" and user_id in ADMIN_IDS:
         await admin_panel(update, context)
         return
@@ -1062,7 +1068,9 @@ async def text_button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE
         await update.message.reply_text("Введите: /unban id", reply_markup=get_admin_keyboard())
         return
     else:
-        await update.message.reply_text("Используйте кнопки ниже.", reply_markup=get_main_keyboard(user_id))
+        # Если текст не совпал — просто игнорируем
+        print(f"Неизвестная кнопка: {text}")
+        return
 # ========== ОБРАБОТЧИК ПРОМОКОДОВ ==========
 async def promo_button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("🎫 Введите код промокода (например, START2026):")
