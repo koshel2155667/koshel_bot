@@ -23,7 +23,7 @@ from telegram.ext import (
     filters
 )
 
-TOKEN = "ВАШ_ТОКЕН"
+TOKEN = "8307541675:AAG5pt1ig8PouMJTy9DPhtnMF8JZI675BMU"
 
 ADMIN_IDS = [
     1205576607
