@@ -1658,6 +1658,7 @@ async def text_button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE
     user_id = update.effective_user.id
     text = update.message.text.strip()
     print(f"DEBUG: '{text}'")
+    print(f"DEBUG: text='{text}', user_id={user_id}, is_admin={user_id in ADMIN_IDS}")
     
     # ... остальной код ...
     # =========================
