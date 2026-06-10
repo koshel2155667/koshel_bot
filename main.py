@@ -1655,6 +1655,7 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # =========================
 
 async def text_button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    print(f"DEBUG: '{text}'")
     user_id = update.effective_user.id
     text = update.message.text.strip()
 
