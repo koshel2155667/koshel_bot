@@ -1086,6 +1086,9 @@ async def text_button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE
     elif text == "✅ Разбанить" and user_id in ADMIN_IDS:
         await update.message.reply_text("Введите: /unban id", reply_markup=get_admin_keyboard())
         return
+    elif text == "🔙 В главное меню" and user_id in ADMIN_IDS:
+    await update.message.reply_text("Главное меню", reply_markup=get_main_keyboard(user_id))
+    return
     else:
         # Если текст не совпал — просто игнорируем
         print(f"Неизвестная кнопка: {text}")
