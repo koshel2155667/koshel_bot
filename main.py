@@ -56,10 +56,6 @@ def get_admin_keyboard():
 import sqlite3
 import threading
 
-import psycopg2
-import os
-import threading
-
 class Database:
     def __init__(self):
         self.conn = psycopg2.connect(os.environ['DATABASE_URL'])
