@@ -555,7 +555,25 @@ def check_quest_completion(
 # =========================
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    pass
+    user = update.effective_user
+    db = Database()
+    
+    existing = db.fetchone("SELECT user_id FROM users WHERE user_id = ?", (user.id,))
+    
+    if not existing:
+        db.execute("""
+            INSERT INTO users (user_id, username, first_name, last_name, balance, registered_at)
+            VALUES (?, ?, ?, ?, ?, ?)
+        """, (user.id, user.username, user.first_name, user.last_name, START_BALANCE, int(time.time())))
+        
+        # Инициализация квестов
+        for q in DAILY_QUESTS + WEEKLY_QUESTS + PERMANENT_QUESTS:
+            db.execute("INSERT INTO quests (user_id, quest_id) VALUES (?, ?)", (user.id, q["id"]))
+    
+    await update.message.reply_text(
+        f"🏒 Добро пожаловать в Hockey Bet!\n\nВаш баланс: {format_balance(START_BALANCE)}",
+        reply_markup=get_main_keyboard(user.id)
+    )
 
 
 async def menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -563,27 +581,136 @@ async def menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 async def bonus(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    pass
+    user_id = update.effective_user.id
+    db = Database()
+    
+    user = db.fetchone("SELECT last_bonus_time, balance FROM users WHERE user_id = ?", (user_id,))
+    if not user:
+        await update.message.reply_text("❌ Вы не зарегистрированы")
+        return
+    
+    last_bonus_time, balance = user
+    now = int(time.time())
+    
+    if now - last_bonus_time < BONUS_INTERVAL:
+        remaining = BONUS_INTERVAL - (now - last_bonus_time)
+        hours = remaining // 3600
+        minutes = (remaining % 3600) // 60
+        await update.message.reply_text(f"⏳ Бонус будет доступен через {hours}ч {minutes}м")
+        return
+    
+    amount = random.randint(BONUS_MIN, BONUS_MAX)
+    db.execute("UPDATE users SET balance = balance + ?, last_bonus_time = ? WHERE user_id = ?", (amount, now, user_id))
+    add_balance_history(user_id, amount, "🎁 Бонус")
+    await update.message.reply_text(f"🎁 Вы получили бонус!")
 
 
 async def profile(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    pass
+    user_id = update.effective_user.id
+    db = Database()
+    
+    user = db.fetchone("""
+        SELECT username, first_name, last_name, balance, turnover, wins, losses, bets_count
+        FROM users WHERE user_id = ?
+    """, (user_id,))
+    
+    if not user:
+        await update.message.reply_text("❌ Вы не зарегистрированы")
+        return
+    
+    username, first_name, last_name, balance, turnover, wins, losses, bets_count = user
+    total = wins + losses
+    win_rate = round(wins / total * 100, 1) if total > 0 else 0
+    
+    text = f"👤 Профиль\n\n"
+    text += f"💰 Баланс: {format_balance(balance)}\n"
+    text += f"🔄 Оборот: {format_balance(turnover)}\n"
+    text += f"🏆 Победы: {wins}\n"
+    text += f"💔 Поражения: {losses}\n"
+    text += f"🎯 Всего ставок: {bets_count}\n"
+    text += f"📈 Процент побед: {win_rate}%\n"
+    
+    await update.message.reply_text(text, reply_markup=get_main_keyboard(user_id))
 
 
 async def top(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    pass
+    db = Database()
+    top_balance = db.fetchall("SELECT user_id, first_name, balance FROM users ORDER BY balance DESC LIMIT 10")
+    top_wins = db.fetchall("SELECT user_id, first_name, wins FROM users ORDER BY wins DESC LIMIT 10")
+    
+    text = "🏆 Топ игроков\n\n"
+    text += "💰 По балансу:\n"
+    for i, u in enumerate(top_balance):
+        medal = "🥇" if i == 0 else "🥈" if i == 1 else "🥉" if i == 2 else f"{i+1}."
+        text += f"{medal} {u[1] or 'Игрок'} — {format_balance(u[2])}\n"
+    
+    text += "\n🏒 По победам:\n"
+    for i, u in enumerate(top_wins):
+        medal = "🥇" if i == 0 else "🥈" if i == 1 else "🥉" if i == 2 else f"{i+1}."
+        text += f"{medal} {u[1] or 'Игрок'} — {u[2]} побед\n"
+    
+    await update.message.reply_text(text, reply_markup=get_main_keyboard(update.effective_user.id))
 
 
 async def stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    pass
+    user_id = update.effective_user.id
+    db = Database()
+    user = db.fetchone("SELECT bets_count, wins, losses, turnover FROM users WHERE user_id = ?", (user_id,))
+    
+    if not user:
+        await update.message.reply_text("❌ Вы не зарегистрированы")
+        return
+    
+    bets_count, wins, losses, turnover = user
+    total = wins + losses
+    win_rate = round(wins / total * 100, 1) if total > 0 else 0
+    
+    text = f"📊 Статистика\n\n"
+    text += f"📈 Всего ставок: {bets_count}\n"
+    text += f"🏆 Победы: {wins}\n"
+    text += f"💔 Поражения: {losses}\n"
+    text += f"📊 Процент побед: {win_rate}%\n"
+    text += f"🔄 Оборот: {format_balance(turnover)}\n"
+    
+    await update.message.reply_text(text, reply_markup=get_main_keyboard(user_id))
 
 
 async def quests(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    pass
+    user_id = update.effective_user.id
+    db = Database()
+    
+    data = db.fetchall("SELECT quest_id, progress, completed FROM quests WHERE user_id = ?", (user_id,))
+    if not data:
+        await update.message.reply_text("🎯 Квесты не найдены")
+        return
+    
+    text = "🎯 Квесты\n\n"
+    for q in data:
+        status = "✅" if q[2] else f"{q[1]}/{q[0]}"  # simplified
+        text += f"{q[0]}: {status}\n"
+    
+    await update.message.reply_text(text, reply_markup=get_main_keyboard(user_id))
 
 
 async def balance_history(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    pass
+    user_id = update.effective_user.id
+    db = Database()
+    
+    history = db.fetchall("SELECT amount, reason, created_at FROM balance_history WHERE user_id = ? ORDER BY created_at DESC LIMIT 10", (user_id,))
+    
+    if not history:
+        await update.message.reply_text("📊 История баланса пуста", reply_markup=get_main_keyboard(user_id))
+        return
+    
+    text = "📊 История баланса\n\n"
+    for h in history:
+        date = datetime.fromtimestamp(h[2]).strftime("%d.%m %H:%M")
+        sign = "+" if h[0] > 0 else ""
+        text += f"{sign}{format_balance(h[0])} — {h[1]} ({date})\n"
+    
+    await update.message.reply_text(text, reply_markup=get_main_keyboard(user_id))
+
+
 async def admin_panel(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
 
@@ -1321,7 +1448,15 @@ async def admin_end_match_command(update: Update, context: ContextTypes.DEFAULT_
             (result, match_id)
         )
 
-        await update.message.reply_text("✅ Матч завершён")
+        # Показываем обновлённый список
+        active = db.fetchall("SELECT id, team1, team2 FROM matches WHERE status = 'active'")
+        text = "📋 Активные матчи:\n\n"
+        if active:
+            for m in active:
+                text += f"{m[0]}: {m[1]} vs {m[2]}\n"
+        else:
+            text += "Нет активных матчей"
+        await update.message.reply_text(text)
 
     except:
         await update.message.reply_text("❌ Ошибка")
@@ -1383,7 +1518,7 @@ async def promo_status(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = "🎫 Промокоды:\n\n"
 
     for p in promos:
-        text += f"{p[0]} | {p[1]}/{p[2]}\n"
+        text += f"{p[0]}: {p[1]}/{p[2]}\n"
 
     await update.message.reply_text(text)
 
@@ -1609,10 +1744,6 @@ async def text_button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE
 
     if text == "📊 Статистика":
         await stats(update, context)
-        return
-
-    if text == "🎯 Квесты":
-        await quests(update, context)
         return
 
     if text == "📊 История баланса":
