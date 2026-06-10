@@ -1015,23 +1015,23 @@ async def balance_history(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def text_button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     text = update.message.text
-    
+
     # Если пользователь в режиме добавления друга
     if "adding_friend" in context.user_data:
         await handle_add_friend(update, context)
         return
-    
+
     # Если пользователь в режиме связи с админом
     if "contacting_admin" in context.user_data:
         await handle_contact_admin(update, context)
         return
-    
+
     # Если пользователь вводит промокод
     if "entering_promo" in context.user_data:
         await use_promo(update, context)
         return
-    
-    # Обработка кнопок
+
+    # Обработка кнопок для ВСЕХ пользователей (обычных и админов)
     if text == "🏒 Матчи":
         await matches(update, context)
         return
@@ -1062,33 +1062,36 @@ async def text_button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE
     elif text == "🎫 Промокод":
         await promo_button_handler(update, context)
         return
-    elif text == "🏒 Создать матч" and user_id in ADMIN_IDS:
-        await admin_create_match(update, context)
-        return
-    elif text == "🏒 Завершить матч" and user_id in ADMIN_IDS:
-        await admin_end_match(update, context)
-        return
-    elif text == "🔧 Админ панель" and user_id in ADMIN_IDS:
-        await admin_panel(update, context)
-        return
-    elif text == "👥 Список пользователей" and user_id in ADMIN_IDS:
-        await admin_users(update, context)
-        return
-    elif text == "💳 Выдать деньги" and user_id in ADMIN_IDS:
-        await update.message.reply_text("Введите: /give_money id сумма", reply_markup=get_admin_keyboard())
-        return
-    elif text == "💳 Списать деньги" and user_id in ADMIN_IDS:
-        await update.message.reply_text("Введите: /take_money id сумма", reply_markup=get_admin_keyboard())
-        return
-    elif text == "🚫 Забанить" and user_id in ADMIN_IDS:
-        await update.message.reply_text("Введите: /ban id", reply_markup=get_admin_keyboard())
-        return
-    elif text == "✅ Разбанить" and user_id in ADMIN_IDS:
-        await update.message.reply_text("Введите: /unban id", reply_markup=get_admin_keyboard())
-        return
-    elif text == "🔙 В главное меню" and user_id in ADMIN_IDS:
-        await update.message.reply_text("Главное меню", reply_markup=get_main_keyboard(user_id))
-        return
+
+    # Админские кнопки (только для админа)
+    if user_id in ADMIN_IDS:
+        if text == "🏒 Создать матч":
+            await admin_create_match(update, context)
+            return
+        elif text == "🏒 Завершить матч":
+            await admin_end_match(update, context)
+            return
+        elif text == "🔧 Админ панель":
+            await admin_panel(update, context)
+            return
+        elif text == "👥 Список пользователей":
+            await admin_users(update, context)
+            return
+        elif text == "💳 Выдать деньги":
+            await update.message.reply_text("Введите: /give_money id сумма", reply_markup=get_admin_keyboard())
+            return
+        elif text == "💳 Списать деньги":
+            await update.message.reply_text("Введите: /take_money id сумма", reply_markup=get_admin_keyboard())
+            return
+        elif text == "🚫 Забанить":
+            await update.message.reply_text("Введите: /ban id", reply_markup=get_admin_keyboard())
+            return
+        elif text == "✅ Разбанить":
+            await update.message.reply_text("Введите: /unban id", reply_markup=get_admin_keyboard())
+            return
+        elif text == "🔙 В главное меню":
+            await update.message.reply_text("Главное меню", reply_markup=get_main_keyboard(user_id))
+            return
     else:
         # Если текст не совпал — просто игнорируем
         print(f"Неизвестная кнопка: {text}")
