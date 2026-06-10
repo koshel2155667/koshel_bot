@@ -802,7 +802,7 @@ async def admin_end_match_command(update: Update, context: ContextTypes.DEFAULT_
                 db.execute("UPDATE bets SET status = 'lost', settled_at = ? WHERE id = ?", (int(time.time()), bet_id))
                 db.execute("UPDATE users SET losses = losses + 1 WHERE user_id = ?", (bet_user_id,))
         
-        # Обновляем список
+                # После завершения матча и обработки ставок
         matches = db.fetchall("SELECT id, team1, team2 FROM matches WHERE status = 'active'")
         if matches:
             text = "📋 Обновлённая таблица активных матчей\n\n"
@@ -812,10 +812,7 @@ async def admin_end_match_command(update: Update, context: ContextTypes.DEFAULT_
         else:
             text = "✅ Все матчи завершены. Активных матчей нет."
         
-        await update.message.reply_text(
-            f"✅ Матч #{match_id} завершен. Счёт: {score1}:{score2}.\n\n{text}",
-            reply_markup=get_admin_keyboard()
-        )
+        await update.message.reply_text(text, reply_markup=get_admin_keyboard())
     except Exception as e:
         await update.message.reply_text(f"❌ Ошибка: {str(e)}")
 # ========== АДМИН: ПРОМОКОДЫ ==========
