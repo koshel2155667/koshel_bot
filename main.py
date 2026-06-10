@@ -737,6 +737,23 @@ async def admin_end_match(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if user_id not in ADMIN_IDS:
         await update.message.reply_text("⛔ Доступ запрещен")
         return
+    db = Database()
+    matches = db.fetchall("SELECT id, team1, team2 FROM matches WHERE status = 'active'")
+    if not matches:
+        await update.message.reply_text("❌ Нет активных матчей", reply_markup=get_admin_keyboard())
+        return
+    
+    text = "📋 Список активных матчей\n\n"
+    for m in matches:
+        text += f"ID: {m[0]} — {m[1]} vs {m[2]} — активен\n"
+    text += "\nВведите команду:\n/end_match <id> <счёт>\n\nПример: /end_match 1 2:1"
+    
+    await update.message.reply_text(text, reply_markup=get_admin_keyboard())
+    async def admin_end_match_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
+    if user_id not in ADMIN_IDS:
+        await update.message.reply_text("⛔ Доступ запрещен")
+        return
     try:
         text = update.message.text
         parts = text.split(' ', 2)
@@ -787,12 +804,12 @@ async def admin_end_match(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 db.execute("UPDATE bets SET status = 'lost', settled_at = ? WHERE id = ?", (int(time.time()), bet_id))
                 db.execute("UPDATE users SET losses = losses + 1 WHERE user_id = ?", (bet_user_id,))
         
-        # Заново загружаем список активных матчей
+        # Обновляем список
         matches = db.fetchall("SELECT id, team1, team2 FROM matches WHERE status = 'active'")
         if matches:
             text = "📋 Обновлённая таблица активных матчей\n\n"
             for m in matches:
-                text += f"#{m[0]} - {m[1]} vs {m[2]} - активен\n"
+                text += f"ID: {m[0]} — {m[1]} vs {m[2]} — активен\n"
             text += "\nВведите команду:\n/end_match <id> <счёт>\n\nПример: /end_match 1 2:1"
         else:
             text = "✅ Все матчи завершены. Активных матчей нет."
@@ -803,7 +820,6 @@ async def admin_end_match(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
     except Exception as e:
         await update.message.reply_text(f"❌ Ошибка: {str(e)}")
-# ... следующий код ...
 # ========== АДМИН: ПРОМОКОДЫ ==========
 async def admin_promocodes(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
