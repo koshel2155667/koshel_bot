@@ -185,6 +185,9 @@ class Database:
             self.cursor.execute(query, params)
             return self.cursor.fetchall()
 # ========== ОБРАБОТЧИКИ ==========
+# ========== УТИЛИТЫ ==========
+def format_balance(amount):
+    return f"{amount:,} {CURRENCY}"
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     args = context.args
