@@ -782,9 +782,9 @@ async def admin_end_match(update: Update, context: ContextTypes.DEFAULT_TYPE):
         db.execute("UPDATE matches SET status = 'finished', result = ? WHERE id = ?", (result, match_id))
         bets = db.fetchall("SELECT id, user_id, bet_choice, amount, odds, potential_win FROM bets WHERE match_id = ? AND status = 'pending'", (match_id,))
         win_count = 0
-for bet in bets:
-    bet_id, bet_user_id, bet_choice, amount, odds, potential = bet
-    win = False
+    for bet in bets:
+        bet_id, bet_user_id, bet_choice, amount, odds, potential = bet
+        win = False
     
     # Определяем выигрыш
     if result == 'П1' and bet_choice == 'p1':
