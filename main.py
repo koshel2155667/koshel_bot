@@ -58,7 +58,6 @@ import os
 
 class Database:
     def __init__(self):
-        # Подключаемся к PostgreSQL через DATABASE_URL
         self.conn = psycopg2.connect(os.environ['DATABASE_URL'])
         self.cursor = self.conn.cursor()
         self._create_tables()
@@ -84,10 +83,89 @@ class Database:
                     daily_quest_reset INTEGER DEFAULT 0,
                     weekly_quest_reset INTEGER DEFAULT 0,
                     friends TEXT DEFAULT ''
-                )
+                );
             """)
-            # ... остальные таблицы (freebets, matches, bets, promocodes, quests, balance_history, admin_messages)
-            # Скопируйте все CREATE TABLE из старого кода и вставьте сюда.
+            self.cursor.execute("""
+                CREATE TABLE IF NOT EXISTS freebets (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    user_id INTEGER,
+                    amount INTEGER,
+                    used INTEGER DEFAULT 0,
+                    created_at INTEGER DEFAULT 0,
+                    expires_at INTEGER DEFAULT 0
+                );
+            """)
+            self.cursor.execute("""
+                CREATE TABLE IF NOT EXISTS matches (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    team1 TEXT,
+                    team2 TEXT,
+                    odds_p1 REAL DEFAULT 1.9,
+                    odds_p2 REAL DEFAULT 1.9,
+                    odds_tb REAL DEFAULT 1.9,
+                    odds_tm REAL DEFAULT 1.9,
+                    odds_ob REAL DEFAULT 1.9,
+                    status TEXT DEFAULT 'active',
+                    result TEXT DEFAULT NULL,
+                    created_at INTEGER DEFAULT 0,
+                    finished_at INTEGER DEFAULT NULL
+                );
+            """)
+            self.cursor.execute("""
+                CREATE TABLE IF NOT EXISTS bets (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    user_id INTEGER,
+                    match_id INTEGER,
+                    bet_type TEXT,
+                    bet_choice TEXT,
+                    amount INTEGER,
+                    odds REAL,
+                    potential_win INTEGER,
+                    status TEXT DEFAULT 'pending',
+                    created_at INTEGER DEFAULT 0,
+                    settled_at INTEGER DEFAULT NULL
+                );
+            """)
+            self.cursor.execute("""
+                CREATE TABLE IF NOT EXISTS promocodes (
+                    code TEXT PRIMARY KEY,
+                    reward_type TEXT,
+                    reward_value TEXT,
+                    max_uses INTEGER DEFAULT 1,
+                    used_count INTEGER DEFAULT 0,
+                    is_active INTEGER DEFAULT 1
+                );
+            """)
+            self.cursor.execute("""
+                CREATE TABLE IF NOT EXISTS quests (
+                    user_id INTEGER,
+                    quest_id TEXT,
+                    progress INTEGER DEFAULT 0,
+                    completed INTEGER DEFAULT 0,
+                    completed_at INTEGER DEFAULT 0,
+                    last_reset INTEGER DEFAULT 0,
+                    PRIMARY KEY (user_id, quest_id)
+                );
+            """)
+            self.cursor.execute("""
+                CREATE TABLE IF NOT EXISTS balance_history (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    user_id INTEGER,
+                    amount INTEGER,
+                    reason TEXT,
+                    created_at INTEGER DEFAULT 0
+                );
+            """)
+            self.cursor.execute("""
+                CREATE TABLE IF NOT EXISTS admin_messages (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    user_id INTEGER,
+                    message TEXT,
+                    reply TEXT DEFAULT NULL,
+                    created_at INTEGER DEFAULT 0,
+                    replied_at INTEGER DEFAULT NULL
+                );
+            """)
             self.conn.commit()
     
     def execute(self, query, params=()):
@@ -105,7 +183,6 @@ class Database:
         with self.conn:
             self.cursor.execute(query, params)
             return self.cursor.fetchall()
-
 # ========== УТИЛИТЫ ==========
 def format_balance(amount):
     return f"{amount:,} {CURRENCY}"
