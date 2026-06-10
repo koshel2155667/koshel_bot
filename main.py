@@ -787,8 +787,7 @@ async def admin_end_match(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 db.execute("UPDATE bets SET status = 'lost', settled_at = ? WHERE id = ?", (int(time.time()), bet_id))
                 db.execute("UPDATE users SET losses = losses + 1 WHERE user_id = ?", (bet_user_id,))
         
-        # ЗАНОВО ЗАГРУЖАЕМ СПИСОК МАТЧЕЙ
-        db = Database()
+        # Заново загружаем список активных матчей
         matches = db.fetchall("SELECT id, team1, team2 FROM matches WHERE status = 'active'")
         if matches:
             text = "📋 Обновлённая таблица активных матчей\n\n"
@@ -804,7 +803,6 @@ async def admin_end_match(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
     except Exception as e:
         await update.message.reply_text(f"❌ Ошибка: {str(e)}")
-
 # ... следующий код ...
 # ========== АДМИН: ПРОМОКОДЫ ==========
 async def admin_promocodes(update: Update, context: ContextTypes.DEFAULT_TYPE):
