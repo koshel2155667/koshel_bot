@@ -749,7 +749,7 @@ async def admin_end_match(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text += "\nВведите команду:\n/end_match <id> <счёт>\n\nПример: /end_match 1 2:1"
     
     await update.message.reply_text(text, reply_markup=get_admin_keyboard())
-    aasync def admin_end_match_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    async def admin_end_match_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     if user_id not in ADMIN_IDS:
         await update.message.reply_text("⛔ Доступ запрещен")
