@@ -86,7 +86,87 @@ class Database:
                     friends TEXT DEFAULT ''
                 );
             """)
-            # ... остальные таблицы ...
+            self.cursor.execute("""
+                CREATE TABLE IF NOT EXISTS freebets (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    user_id INTEGER,
+                    amount INTEGER,
+                    used INTEGER DEFAULT 0,
+                    created_at INTEGER DEFAULT 0,
+                    expires_at INTEGER DEFAULT 0
+                );
+            """)
+            self.cursor.execute("""
+                CREATE TABLE IF NOT EXISTS matches (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    team1 TEXT,
+                    team2 TEXT,
+                    odds_p1 REAL DEFAULT 1.9,
+                    odds_p2 REAL DEFAULT 1.9,
+                    odds_tb REAL DEFAULT 1.9,
+                    odds_tm REAL DEFAULT 1.9,
+                    odds_ob REAL DEFAULT 1.9,
+                    status TEXT DEFAULT 'active',
+                    result TEXT DEFAULT NULL,
+                    created_at INTEGER DEFAULT 0,
+                    finished_at INTEGER DEFAULT NULL
+                );
+            """)
+            self.cursor.execute("""
+                CREATE TABLE IF NOT EXISTS bets (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    user_id INTEGER,
+                    match_id INTEGER,
+                    bet_type TEXT,
+                    bet_choice TEXT,
+                    amount INTEGER,
+                    odds REAL,
+                    potential_win INTEGER,
+                    status TEXT DEFAULT 'pending',
+                    created_at INTEGER DEFAULT 0,
+                    settled_at INTEGER DEFAULT NULL
+                );
+            """)
+            self.cursor.execute("""
+                CREATE TABLE IF NOT EXISTS promocodes (
+                    code TEXT PRIMARY KEY,
+                    reward_type TEXT,
+                    reward_value TEXT,
+                    max_uses INTEGER DEFAULT 1,
+                    used_count INTEGER DEFAULT 0,
+                    is_active INTEGER DEFAULT 1
+                );
+            """)
+            self.cursor.execute("""
+                CREATE TABLE IF NOT EXISTS quests (
+                    user_id INTEGER,
+                    quest_id TEXT,
+                    progress INTEGER DEFAULT 0,
+                    completed INTEGER DEFAULT 0,
+                    completed_at INTEGER DEFAULT 0,
+                    last_reset INTEGER DEFAULT 0,
+                    PRIMARY KEY (user_id, quest_id)
+                );
+            """)
+            self.cursor.execute("""
+                CREATE TABLE IF NOT EXISTS balance_history (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    user_id INTEGER,
+                    amount INTEGER,
+                    reason TEXT,
+                    created_at INTEGER DEFAULT 0
+                );
+            """)
+            self.cursor.execute("""
+                CREATE TABLE IF NOT EXISTS admin_messages (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    user_id INTEGER,
+                    message TEXT,
+                    reply TEXT DEFAULT NULL,
+                    created_at INTEGER DEFAULT 0,
+                    replied_at INTEGER DEFAULT NULL
+                );
+            """)
             self.conn.commit()
     
     def execute(self, query, params=()):
@@ -104,17 +184,6 @@ class Database:
         with self.lock:
             self.cursor.execute(query, params)
             return self.cursor.fetchall()
-# ========== УТИЛИТЫ ==========
-def format_balance(amount):
-    return f"{amount:,} {CURRENCY}"
-
-def format_match_row(m):
-    return f"🏒 {m[1]} vs {m[2]} | П1: {m[3]} П2: {m[4]} ТБ: {m[5]} ТМ: {m[6]} ОЗ: {m[7]}"
-
-def add_balance_history(user_id, amount, reason, db):
-    db.execute;("INSERT INTO balance_history (user_id, amount, reason, created_at) VALUES (?, ?, ?, ?)",
-               (user_id, amount, reason, int(time.time())))
-
 # ========== ОБРАБОТЧИКИ ==========
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
