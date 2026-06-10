@@ -995,6 +995,7 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 # ========== ИСТОРИЯ БАЛАНСА ==========
 async def balance_history(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    print(f"DEBUG: Получен текст: '{text}' от user_id={user_id}")
     user_id = update.effective_user.id
     db = Database()
     history = db.fetchall("SELECT amount, reason, created_at FROM balance_history WHERE user_id = ? ORDER BY created_at DESC LIMIT 10", (user_id,))
