@@ -735,22 +735,8 @@ async def admin_create_match(update: Update, context: ContextTypes.DEFAULT_TYPE)
     except Exception as e:
         await update.message.reply_text(f"❌ Ошибка: {str(e)}")
 
+# ========== АДМИН: ЗАВЕРШИТЬ МАТЧ ==========
 async def admin_end_match(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_id = update.effective_user.id
-    if user_id not in ADMIN_IDS:
-        await update.message.reply_text("⛔ Доступ запрещен")
-        return
-    db = Database()
-    matches = db.fetchall("SELECT id, team1, team2 FROM matches WHERE status = 'active'")
-    if not matches:
-        await update.message.reply_text("❌ Нет активных матчей", reply_markup=get_admin_keyboard())
-        return
-    text = "📋 Список активных матчей для завершения\n\n"
-    for m in matches:
-        text += f"#{m[0]} - {m[1]} vs {m[2]} - активен\n"
-    text += "\nВведите команду:\n/end_match <id> <счёт>"
-    await update.message.reply_text(text, reply_markup=get_admin_keyboard())
-async def admin_end_match_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     if user_id not in ADMIN_IDS:
         await update.message.reply_text("⛔ Доступ запрещен")
@@ -776,6 +762,7 @@ async def admin_end_match_command(update: Update, context: ContextTypes.DEFAULT_
         if not match:
             await update.message.reply_text("❌ Матч не найден", reply_markup=get_admin_keyboard())
             return
+        # Определяем результаты
         result = ""
         if score1 > score2:
             result = "П1"
@@ -817,16 +804,30 @@ async def admin_end_match_command(update: Update, context: ContextTypes.DEFAULT_
                 db.execute("UPDATE bets SET status = 'lost', settled_at = ? WHERE id = ?", (int(time.time()), bet_id))
                 db.execute("UPDATE users SET losses = losses + 1 WHERE user_id = ?", (bet_user_id,))
                 add_balance_history(bet_user_id, -amount, f"💔 Проигрыш в матче #{match_id}", db)
-        await update.message.reply_text(
-            f"✅ Матч #{match_id} завершен.\nСчёт: {score}\n"
-            f"Результат: {result}\n"
-            f"Тотал: {result_tb}\n"
-            f"Обе забьют: {result_ob}\n"
-            f"Выиграло {win_count} ставок.",
-            reply_markup=get_admin_keyboard()
-        )
-    except Exception as e:
-        await update.message.reply_text(f"❌ Ошибка: {str(e)}", reply_markup=get_admin_keyboard())
+        # Показываем обновлённый список активных матчей
+        active_matches = db.fetchall("SELECT id, team1, team2 FROM matches WHERE status = 'active'")
+        if active_matches:
+            text = "📋 Список активных матчей для завершения\n\n"
+            for m in active_matches:
+                text += f"#{m[0]} - {m[1]} vs {m[2]} - активен\n"
+            text += "\nВведите команду:\n/end_match <id> <счёт>"
+            await update.message.reply_text(
+                f"✅ Матч #{match_id} завершен.\nСчёт: {score}\n"
+                f"Результат: {result}\n"
+                f"Тотал: {result_tb}\n"
+                f"Обе забьют: {result_ob}\n"
+                f"Выиграло {win_count} ставок.\n\n{text}",
+                reply_markup=get_admin_keyboard()
+            )
+        else:
+            await update.message.reply_text(
+                f"✅ Матч #{match_id} завершен.\nСчёт: {score}\n"
+                f"Результат: {result}\n"
+                f"Тотал: {result_tb}\n"
+                f"Обе забьют: {result_ob}\n"
+                f"Выиграло {win_count} ставок.\n\n✅ Все активные матчи завершены.",
+                reply_markup=get_admin_keyboard()
+            )
     except Exception as e:
         await update.message.reply_text(f"❌ Ошибка: {str(e)}", reply_markup=get_admin_keyboard())
 # ========== АДМИН: ПРОМОКОДЫ ==========
