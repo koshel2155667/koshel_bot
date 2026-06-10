@@ -150,41 +150,19 @@ def get_main_keyboard(user_id):
     )
 
 
-def get_admin_keyboard():
+from telegram import ReplyKeyboardMarkup, KeyboardButton
 
+def get_admin_keyboard():
     keyboard = [
-        [
-            KeyboardButton("👥 Список пользователей")
-        ],
-        [
-            KeyboardButton("💳 Выдать деньги"),
-            KeyboardButton("💳 Списать деньги")
-        ],
-        [
-            KeyboardButton("🚫 Забанить"),
-            KeyboardButton("✅ Разбанить")
-        ],
-        [
-            KeyboardButton("🏒 Создать матч"),
-            KeyboardButton("🏒 Завершить матч")
-        ],
-        [
-            KeyboardButton("🎫 Создать промокод"),
-            KeyboardButton("📢 Рассылка")
-        ],
-        [
-            KeyboardButton("📊 Статистика бота"),
-            KeyboardButton("📨 Состояние промокодов")
-        ],
-        [
-            KeyboardButton("🔙 В главное меню")
-        ]
+        [KeyboardButton("👥 Пользователи"), KeyboardButton("📊 Статистика бота")],
+        [KeyboardButton("💰 Выдать деньги"), KeyboardButton("💸 Списать деньги")],
+        [KeyboardButton("🚫 Забанить"), KeyboardButton("✅ Разбанить")],
+        [KeyboardButton("🏒 Матчи"), KeyboardButton("🎫 Промокоды")],
+        [KeyboardButton("📢 Рассылка"), KeyboardButton("📨 Сообщения")],
+        [KeyboardButton("🔙 В главное меню")]
     ]
 
-    return ReplyKeyboardMarkup(
-        keyboard,
-        resize_keyboard=True
-    )
+    return ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
 # =========================
 # DATABASE
 # =========================
