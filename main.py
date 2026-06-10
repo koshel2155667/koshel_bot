@@ -785,9 +785,16 @@ async def admin_end_match(update: Update, context: ContextTypes.DEFAULT_TYPE):
         for bet in bets:
             bet_id, bet_user_id, bet_choice, amount, odds, potential = bet
             win = False
-            if bet_choice == 'p1' and result == "П1":
-                win = True
-            elif bet_choice == 'p2' and result == "П2":
+            if result == 'П1' and bet_choice == 'p1':
+    win = True
+elif bet_choice == 'p2' and result == "П2":
+    win = True
+elif bet_choice == 'tb' and result == "ТБ":
+    win = True
+elif bet_choice == 'tm' and result == "ТМ":
+    win = True
+elif bet_choice == 'ob' and result == "ОБ":
+    win = True
 async def admin_end_match(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     if user_id not in ADMIN_IDS:
