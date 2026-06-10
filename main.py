@@ -56,9 +56,13 @@ def get_admin_keyboard():
 import sqlite3
 import threading
 
+import psycopg2
+import os
+import threading
+
 class Database:
-    def __init__(self, db_path="hockey_bet.db"):
-        self.conn = sqlite3.connect(db_path, check_same_thread=False)
+    def __init__(self):
+        self.conn = psycopg2.connect(os.environ['DATABASE_URL'])
         self.cursor = self.conn.cursor()
         self.lock = threading.Lock()
         self._create_tables()
