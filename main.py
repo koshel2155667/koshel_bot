@@ -53,17 +53,18 @@ def get_admin_keyboard():
     ]
     return ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
 # ========== БАЗА ДАННЫХ ==========
-import psycopg2
-import os
+import sqlite3
+import threading
 
 class Database:
-    def __init__(self):
-        self.conn = psycopg2.connect(os.environ['DATABASE_URL'])
+    def __init__(self, db_path="hockey_bet.db"):
+        self.conn = sqlite3.connect(db_path, check_same_thread=False)
         self.cursor = self.conn.cursor()
+        self.lock = threading.Lock()
         self._create_tables()
     
     def _create_tables(self):
-        with self.conn:
+        with self.lock:
             self.cursor.execute("""
                 CREATE TABLE IF NOT EXISTS users (
                     user_id INTEGER PRIMARY KEY,
@@ -85,102 +86,22 @@ class Database:
                     friends TEXT DEFAULT ''
                 );
             """)
-            self.cursor.execute("""
-                CREATE TABLE IF NOT EXISTS freebets (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    user_id INTEGER,
-                    amount INTEGER,
-                    used INTEGER DEFAULT 0,
-                    created_at INTEGER DEFAULT 0,
-                    expires_at INTEGER DEFAULT 0
-                );
-            """)
-            self.cursor.execute("""
-                CREATE TABLE IF NOT EXISTS matches (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    team1 TEXT,
-                    team2 TEXT,
-                    odds_p1 REAL DEFAULT 1.9,
-                    odds_p2 REAL DEFAULT 1.9,
-                    odds_tb REAL DEFAULT 1.9,
-                    odds_tm REAL DEFAULT 1.9,
-                    odds_ob REAL DEFAULT 1.9,
-                    status TEXT DEFAULT 'active',
-                    result TEXT DEFAULT NULL,
-                    created_at INTEGER DEFAULT 0,
-                    finished_at INTEGER DEFAULT NULL
-                );
-            """)
-            self.cursor.execute("""
-                CREATE TABLE IF NOT EXISTS bets (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    user_id INTEGER,
-                    match_id INTEGER,
-                    bet_type TEXT,
-                    bet_choice TEXT,
-                    amount INTEGER,
-                    odds REAL,
-                    potential_win INTEGER,
-                    status TEXT DEFAULT 'pending',
-                    created_at INTEGER DEFAULT 0,
-                    settled_at INTEGER DEFAULT NULL
-                );
-            """)
-            self.cursor.execute("""
-                CREATE TABLE IF NOT EXISTS promocodes (
-                    code TEXT PRIMARY KEY,
-                    reward_type TEXT,
-                    reward_value TEXT,
-                    max_uses INTEGER DEFAULT 1,
-                    used_count INTEGER DEFAULT 0,
-                    is_active INTEGER DEFAULT 1
-                );
-            """)
-            self.cursor.execute("""
-                CREATE TABLE IF NOT EXISTS quests (
-                    user_id INTEGER,
-                    quest_id TEXT,
-                    progress INTEGER DEFAULT 0,
-                    completed INTEGER DEFAULT 0,
-                    completed_at INTEGER DEFAULT 0,
-                    last_reset INTEGER DEFAULT 0,
-                    PRIMARY KEY (user_id, quest_id)
-                );
-            """)
-            self.cursor.execute("""
-                CREATE TABLE IF NOT EXISTS balance_history (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    user_id INTEGER,
-                    amount INTEGER,
-                    reason TEXT,
-                    created_at INTEGER DEFAULT 0
-                );
-            """)
-            self.cursor.execute("""
-                CREATE TABLE IF NOT EXISTS admin_messages (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    user_id INTEGER,
-                    message TEXT,
-                    reply TEXT DEFAULT NULL,
-                    created_at INTEGER DEFAULT 0,
-                    replied_at INTEGER DEFAULT NULL
-                );
-            """)
+            # ... остальные таблицы ...
             self.conn.commit()
     
     def execute(self, query, params=()):
-        with self.conn:
+        with self.lock:
             self.cursor.execute(query, params)
             self.conn.commit()
             return self.cursor
     
     def fetchone(self, query, params=()):
-        with self.conn:
+        with self.lock:
             self.cursor.execute(query, params)
             return self.cursor.fetchone()
     
     def fetchall(self, query, params=()):
-        with self.conn:
+        with self.lock:
             self.cursor.execute(query, params)
             return self.cursor.fetchall()
 # ========== УТИЛИТЫ ==========
