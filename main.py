@@ -31,10 +31,10 @@ ADMIN_IDS = [
 
 CURRENCY = "🏒 Шайбочки"
 
-START_BALANCE = 1000
+START_BALANCE = 2000
 
-BONUS_INTERVAL = 18000
-BONUS_MIN = 500
+BONUS_INTERVAL = 7200
+BONUS_MIN = 1500
 BONUS_MAX = 5000
 # =========================
 # СПИСКИ КВЕСТОВ
