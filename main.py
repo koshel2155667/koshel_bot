@@ -1401,53 +1401,98 @@ async def admin_create_match(update: Update, context: ContextTypes.DEFAULT_TYPE)
 
 async def admin_end_match(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
-
     if not is_admin(user_id):
         return
 
     db = Database()
+    matches = db.fetchall("SELECT id, team1, team2 FROM matches WHERE status = 'active'")
+    if not matches:
+        await update.message.reply_text("❌ Нет активных матчей")
+        return
 
-    matches = db.fetchall(
-        "SELECT id, team1, team2 FROM matches WHERE status = 'active'"
-    )
-
-    text = "🏒 Активные матчи:\n\n"
-
+    text = "📋 Активные матчи:\n\n"
     for m in matches:
-        text += f"{m[0]}: {m[1]} vs {m[2]}\n"
+        text += f"ID: {m[0]} — {m[1]} vs {m[2]}\n"
+    text += "\nВведите ID матча и счёт (например: 1 2:1):"
 
     await update.message.reply_text(text)
+
+    # Сохраняем состояние
+    context.user_data["admin_end_match"] = {"matches": matches}
 
 
 async def admin_end_match_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
-
     if not is_admin(user_id):
         return
 
     try:
-        _, match_id, result = update.message.text.split()
+        args = update.message.text.split()
+        if len(args) < 3:
+            await update.message.reply_text("❌ Введите: ID СЧЁТ")
+            return
+
+        match_id = int(args[1])
+        score_str = args[2]
+
+        # Разбираем счёт
+        try:
+            score1, score2 = map(int, score_str.split(':'))
+        except:
+            await update.message.reply_text("❌ Неверный формат счёта")
+            return
 
         db = Database()
 
-        db.execute(
-            "UPDATE matches SET status = 'finished', result = ? WHERE id = ?",
-            (result, match_id)
+        # Определяем результаты
+        result = "П1" if score1 > score2 else "П2" if score2 > score1 else "Х"
+        result_tb = "ТБ" if score1 + score2 > 5 else "ТМ"
+        result_ob = "ОБ" if score1 > 0 and score2 > 0 else "НЕТ"
+
+        db.execute("UPDATE matches SET status = 'finished', result = ? WHERE id = ?", (result, match_id))
+
+        # Обрабатываем ставки
+        bets = db.fetchall("SELECT id, user_id, bet_choice, amount, odds, potential_win FROM bets WHERE match_id = ? AND status = 'pending'", (match_id,))
+        win_count = 0
+
+        for bet in bets:
+            bet_id, bet_user_id, bet_choice, amount, odds, potential = bet
+            win = False
+
+            if bet_choice == 'p1' and result == "П1":
+                win = True
+            elif bet_choice == 'p2' and result == "П2":
+                win = True
+            elif bet_choice == 'tb' and result_tb == "ТБ":
+                win = True
+            elif bet_choice == 'tm' and result_tb == "ТМ":
+                win = True
+            elif bet_choice == 'ob' and result_ob == "ОБ":
+                win = True
+
+            if win:
+                db.execute("UPDATE bets SET status = 'won', settled_at = ? WHERE id = ?", (int(time.time()), bet_id))
+                db.execute("UPDATE users SET balance = balance + ?, wins = wins + 1 WHERE user_id = ?", (potential, bet_user_id))
+                win_count += 1
+            else:
+                db.execute("UPDATE bets SET status = 'lost', settled_at = ? WHERE id = ?", (int(time.time()), bet_id))
+                db.execute("UPDATE users SET losses = losses + 1 WHERE user_id = ?", (bet_user_id,))
+
+        # Обновляем таблицу
+        matches = db.fetchall("SELECT id, team1, team2 FROM matches WHERE status = 'active'")
+        if matches:
+            text = "📋 Обновлённая таблица:\n\n"
+            for m in matches:
+                text += f"ID: {m[0]} — {m[1]} vs {m[2]}\n"
+        else:
+            text = "✅ Все матчи завершены"
+
+        await update.message.reply_text(
+            f"✅ Матч #{match_id} завершён. Счёт: {score1}:{score2}.\n\n{text}"
         )
 
-        # Показываем обновлённый список
-        active = db.fetchall("SELECT id, team1, team2 FROM matches WHERE status = 'active'")
-        text = "📋 Активные матчи:\n\n"
-        if active:
-            for m in active:
-                text += f"{m[0]}: {m[1]} vs {m[2]}\n"
-        else:
-            text += "Нет активных матчей"
-        await update.message.reply_text(text)
-
-    except:
-        await update.message.reply_text("❌ Ошибка")
-
+    except Exception as e:
+        await update.message.reply_text(f"❌ Ошибка: {str(e)}")
 
 async def admin_promocodes(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
