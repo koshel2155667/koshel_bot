@@ -159,7 +159,8 @@ def get_admin_keyboard():
         [KeyboardButton("🚫 Забанить"), KeyboardButton("✅ Разбанить")],
         [KeyboardButton("🏒 Создать матч"), KeyboardButton("🏒 Завершить матч")],
         [KeyboardButton("🎫 Промокоды"), KeyboardButton("📢 Рассылка")],
-        [KeyboardButton("📨 Сообщения"), KeyboardButton("🔙 В главное меню")]
+        [KeyboardButton("📨 Сообщения"), KeyboardButton("📨 Состояние промокодов")],
+        [KeyboardButton("🔙 В главное меню")]
     ]
     return ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
 # =========================
@@ -582,12 +583,25 @@ async def menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def bonus(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     db = Database()
-    
     user = db.fetchone("SELECT last_bonus_time, balance FROM users WHERE user_id = ?", (user_id,))
     if not user:
         await update.message.reply_text("❌ Вы не зарегистрированы")
         return
-    
+    last_bonus_time, balance = user
+    now = int(time.time())
+    if now - last_bonus_time < BONUS_INTERVAL:
+        remaining = BONUS_INTERVAL - (now - last_bonus_time)
+        hours = remaining // 3600
+        minutes = (remaining % 3600) // 60
+        await update.message.reply_text(f"⏳ Бонус будет доступен через {hours}ч {minutes}м")
+        return
+    amount = random.randint(BONUS_MIN, BONUS_MAX)
+    db.execute("UPDATE users SET balance = balance + ?, last_bonus_time = ? WHERE user_id = ?", (amount, now, user_id))
+    add_balance_history(user_id, amount, "🎁 Бонус")
+    await update.message.reply_text(
+        f"🎁 Вы получили бонус!\n"
+        f"Ваш баланс: {format_balance(balance + amount)}"  # <-- добавляем уведомление
+    )
     last_bonus_time, balance = user
     now = int(time.time())
     
@@ -861,6 +875,24 @@ async def handle_contact_admin(update: Update, context: ContextTypes.DEFAULT_TYP
 # =========================
 # 11. ПРОМОКОДЫ
 # =========================
+async def promo_status(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
+    if not is_admin(user_id):
+        return
+
+    db = Database()
+
+    promos = db.fetchall("SELECT code, reward_type, reward_value, max_uses, used_count, is_active FROM promocodes")
+
+    text = "🎫 Состояние промокодов:\n\n"
+
+    for p in promos:
+        code, rtype, rvalue, max_uses, used, active = p
+        status = "✅ Активен" if active else "❌ Неактивен"
+        text += f"📌 {code} — {rtype} ({rvalue})\n"
+        text += f"   Использовано: {used}/{max_uses} | {status}\n\n"
+
+    await update.message.reply_text(text)
 
 async def promo_button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
@@ -1275,33 +1307,30 @@ async def admin_users(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def admin_give_money(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
-
     if not is_admin(user_id):
         return
-
     try:
         _, target_id, amount = update.message.text.split()
         target_id = int(target_id)
         amount = int(amount)
-
         db = Database()
-
-        db.execute(
-            "UPDATE users SET balance = balance + ? WHERE user_id = ?",
-            (amount, target_id)
-        )
-
+        db.execute("UPDATE users SET balance = balance + ? WHERE user_id = ?", (amount, target_id))
         add_balance_history(target_id, amount, "💳 Админ начислил")
-
-        await update.message.reply_text("✅ Деньги выданы")
-
+        await update.message.reply_text(
+            f"✅ Выдано {format_balance(amount)} пользователю {target_id}"  # <-- уведомление админу
+        )
+        # Уведомление самому пользователю
+        try:
+            await context.bot.send_message(
+                chat_id=target_id,
+                text=f"💳 Админ выдал вам {format_balance(amount)}"
+            )
+        except:
+            pass
     except:
         await update.message.reply_text("❌ Ошибка")
-
-
 async def admin_take_money(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
-
     if not is_admin(user_id):
         return
 
@@ -1311,20 +1340,24 @@ async def admin_take_money(update: Update, context: ContextTypes.DEFAULT_TYPE):
         amount = int(amount)
 
         db = Database()
-
-        db.execute(
-            "UPDATE users SET balance = balance - ? WHERE user_id = ?",
-            (amount, target_id)
-        )
-
+        db.execute("UPDATE users SET balance = balance - ? WHERE user_id = ?", (amount, target_id))
         add_balance_history(target_id, -amount, "💳 Админ списал")
 
-        await update.message.reply_text("✅ Деньги списаны")
+        await update.message.reply_text(
+            f"✅ Списано {format_balance(amount)} с пользователя {target_id}"
+        )
 
-    except:
-        await update.message.reply_text("❌ Ошибка")
+        # Уведомление пользователю
+        try:
+            await context.bot.send_message(
+                chat_id=target_id,
+                text=f"💳 Админ списал {format_balance(amount)} с вашего счета"
+            )
+        except:
+            pass
 
-
+    except Exception as e:
+        await update.message.reply_text(f"❌ Ошибка: {str(e)}")
 async def admin_ban(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
 
@@ -1818,6 +1851,9 @@ async def text_button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE
             return
         if text == "📊 Статистика бота":
             await admin_stats(update, context)
+            return
+        if text == "📨 Состояние промокодов":
+            await promo_status(update, context)
             return
         if text == "💰 Выдать деньги":
             await update.message.reply_text(
