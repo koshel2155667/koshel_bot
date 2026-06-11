@@ -352,7 +352,7 @@ def add_balance_history(
 
     db.execute(
         """
-        INSERT INTO balance_history
+        INSERT INTO alance_history
         (
             user_id,
             amount,
@@ -374,198 +374,193 @@ def check_quest_completion(
     user_id
 ):
 
+    # 
+# =========================
+# СПИСКИ КВЕСТОВ
+# =========================
+DAILY_QUESTS = [
+    {
+        "id": "daily_bets_3",
+        "name": "Сделать 3 ставки",
+        "target": 3,
+        "reward": 500
+    },
+    {
+        "id": "daily_win_1",
+        "name": "Выиграть 1 ставку",
+        "target": 1,
+        "reward": 500
+    },
+    {
+        "id": "daily_bonus",
+        "name": "Получить бонус",
+        "target": 1,
+        "reward": 500
+    }
+]
+
+WEEKLY_QUESTS = [
+    {
+        "id": "weekly_bets_20",
+        "name": "Сделать 20 ставок",
+        "target": 20,
+        "reward": 2000
+    },
+    {
+        "id": "weekly_wins_10",
+        "name": "Выиграть 10 ставок",
+        "target": 10,
+        "reward": 2000
+    },
+    {
+        "id": "weekly_invite",
+        "name": "Пригласить друга",
+        "target": 1,
+        "reward": 2000
+    }
+]
+
+PERMANENT_QUESTS = [
+    {
+        "id": "perm_bets_10",
+        "name": "10 ставок",
+        "target": 10,
+        "reward": 1000
+    },
+    {
+        "id": "perm_bets_25",
+        "name": "25 ставок",
+        "target": 25,
+        "reward": 2000
+    },
+    {
+        "id": "perm_bets_50",
+        "name": "50 ставок",
+        "target": 50,
+        "reward": 3000
+    },
+    {
+        "id": "perm_bets_100",
+        "name": "100 ставок",
+        "target": 100,
+        "reward": 5000
+    },
+    {
+        "id": "perm_bets_250",
+        "name": "250 ставок",
+        "target": 250,
+        "reward": 10000
+    },
+    {
+        "id": "perm_bets_500",
+        "name": "500 ставок",
+        "target": 500,
+        "reward": 20000
+    },
+    {
+        "id": "perm_bets_1000",
+        "name": "1000 ставок",
+        "target": 1000,
+        "reward": 50000
+    },
+    {
+        "id": "perm_wins_10",
+        "name": "10 побед",
+        "target": 10,
+        "reward": 1000
+    },
+    {
+        "id": "perm_wins_25",
+        "name": "25 побед",
+        "target": 25,
+        "reward": 2000
+    },
+    {
+        "id": "perm_wins_50",
+        "name": "50 побед",
+        "target": 50,
+        "reward": 3000
+    },
+    {
+        "id": "perm_wins_100",
+        "name": "100 побед",
+        "target": 100,
+        "reward": 5000
+    },
+    {
+        "id": "perm_wins_250",
+        "name": "250 побед",
+        "target": 250,
+        "reward": 10000
+    },
+    {
+        "id": "perm_wins_500",
+        "name": "500 побед",
+        "target": 500,
+        "reward": 20000
+    },
+    {
+        "id": "perm_wins_1000",
+        "name": "1000 побед",
+        "target": 1000,
+        "reward": 50000
+    }
+]
+
+async def quests(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
+    db = Database()
+    
+    data = db.fetchall("SELECT quest_id, progress, completed FROM quests WHERE user_id = ?", (user_id,))
+    
+    if not data:
+        await update.message.reply_text("🎯 Квесты не найдены")
+        return
+    
+    # Преобразуем в словарь для удобства
+    quests_dict = {q[0]: {"progress": q[1], "completed": q[2]} for q in data}
+    
+    text = "🎯 КВЕСТЫ\n\n"
+    
     # Ежедневные
-    for quest in DAILY_QUESTS:
-
-        data = db.fetchone(
-            """
-            SELECT
-                progress,
-                completed
-            FROM quests
-            WHERE user_id = ?
-            AND quest_id = ?
-            """,
-            (
-                user_id,
-                quest["id"]
-            )
-        )
-
-        if not data:
-            continue
-
-        progress, completed = data
-
-        if completed == 0 and progress >= quest["target"]:
-
-            db.execute(
-                """
-                UPDATE quests
-                SET
-                    completed = 1,
-                    completed_at = ?
-                WHERE user_id = ?
-                AND quest_id = ?
-                """,
-                (
-                    int(time.time()),
-                    user_id,
-                    quest["id"]
-                )
-            )
-
-            db.execute(
-                """
-                UPDATE users
-                SET balance = balance + ?
-                WHERE user_id = ?
-                """,
-                (
-                    quest["reward"],
-                    user_id
-                )
-            )
-
-            add_balance_history(
-                user_id,
-                quest["reward"],
-                f"🎯 Квест: {quest['name']}"
-            )
-
+    text += "📅 ЕЖЕДНЕВНЫЕ:\n"
+    for q in DAILY_QUESTS:
+        qid = q["id"]
+        if qid in quests_dict:
+            progress = quests_dict[qid]["progress"]
+            completed = quests_dict[qid]["completed"]
+            status = "✅" if completed else f"{progress}/{q['target']}"
+        else:
+            status = f"0/{q['target']}"
+        text += f"{q['name']}: {status} (+{q['reward']})\n"
+    text += "\n"
+    
     # Еженедельные
-    for quest in WEEKLY_QUESTS:
-
-        data = db.fetchone(
-            """
-            SELECT
-                progress,
-                completed
-            FROM quests
-            WHERE user_id = ?
-            AND quest_id = ?
-            """,
-            (
-                user_id,
-                quest["id"]
-            )
-        )
-
-        if not data:
-            continue
-
-        progress, completed = data
-
-        if completed == 0 and progress >= quest["target"]:
-
-            db.execute(
-                """
-                UPDATE quests
-                SET
-                    completed = 1,
-                    completed_at = ?
-                WHERE user_id = ?
-                AND quest_id = ?
-                """,
-                (
-                    int(time.time()),
-                    user_id,
-                    quest["id"]
-                )
-            )
-
-            db.execute(
-                """
-                UPDATE users
-                SET balance = balance + ?
-                WHERE user_id = ?
-                """,
-                (
-                    quest["reward"],
-                    user_id
-                )
-            )
-
-            add_balance_history(
-                user_id,
-                quest["reward"],
-                f"🎯 Квест: {quest['name']}"
-            )
-
-    # Постоянные
-    for quest in PERMANENT_QUESTS:
-
-        data = db.fetchone(
-            """
-            SELECT
-                progress,
-                completed
-            FROM quests
-            WHERE user_id = ?
-            AND quest_id = ?
-            """,
-            (
-                user_id,
-                quest["id"]
-            )
-        )
-
-        if not data:
-            continue
-
-        progress, completed = data
-
-        if completed == 0 and progress >= quest["target"]:
-
-            db.execute(
-                """
-                UPDATE quests
-                SET
-                    completed = 1,
-                    completed_at = ?
-                WHERE user_id = ?
-                AND quest_id = ?
-                """,
-                (
-                    int(time.time()),
-                    user_id,
-                    quest["id"]
-                )
-            )
-
-            db.execute(
-                """
-                UPDATE users
-                SET balance = balance + ?
-                WHERE user_id = ?
-                """,
-                (
-                    quest["reward"],
-                    user_id
-                )
-            )
-
-            add_balance_history(
-                user_id,
-                quest["reward"],
-                f"🎯 Квест: {quest['name']}"
-            )
-    async def quests(update: Update, context: ContextTypes.DEFAULT_TYPE):
-        user_id = update.effective_user.id
-        db = Database()
+    text += "📅 ЕЖЕНЕДЕЛЬНЫЕ:\n"
+    for q in WEEKLY_QUESTS:
+        qid = q["id"]
+        if qid in quests_dict:
+            progress = quests_dict[qid]["progress"]
+            completed = quests_dict[qid]["completed"]
+            status = "✅" if completed else f"{progress}/{q['target']}"
+        else:
+            status = f"0/{q['target']}"
+        text += f"{q['name']}: {status} (+{q['reward']})\n"
+    text += "\n"
     
-        data = db.fetchall("SELECT quest_id, progress, completed FROM quests WHERE user_id = ?", (user_id,))
+    # Бессрочные
+    text += "🏆 БЕССРОЧНЫЕ:\n"
+    for q in PERMANENT_QUESTS:
+        qid = q["id"]
+        if qid in quests_dict:
+            progress = quests_dict[qid]["progress"]
+            completed = quests_dict[qid]["completed"]
+            status = "✅" if completed else f"{progress}/{q['target']}"
+        else:
+            status = f"0/{q['target']}"
+        text += f"{q['name']}: {status} (+{q['reward']})\n"
     
-        if not data:
-            await update.message.reply_text("🎯 Квесты не найдены")
-            return
-    
-        text = "🎯 Квесты\n\n"
-        for q in data:
-            status = "✅" if q[2] else f"{q[1]}/{q[0]}"
-            text += f"{q[0]}: {status}\n"
-    
-        await update.message.reply_text(text, reply_markup=get_main_keyboard(user_id))
+    await update.message.reply_text(text, reply_markup=get_main_keyboard(user_id))
 # ОСНОВНЫЕ КОМАНДЫ
 # =========================
 
