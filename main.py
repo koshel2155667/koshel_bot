@@ -1654,10 +1654,10 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # =========================
 
 async def text_button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    print(f"DEBUG: text_button_handler вызван, text='{text}'")
     user_id = update.effective_user.id
     text = update.message.text.strip()
     print(f"DEBUG: '{text}'")
+    print(f"DEBUG: text_button_handler вызван, text='{text}'")
     print(f"DEBUG: text='{text}', user_id={user_id}, is_admin={user_id in ADMIN_IDS}")
     if text == "🔧 Админ панель":
         print("✅ Вызываю admin_panel()")
