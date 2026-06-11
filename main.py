@@ -1859,17 +1859,8 @@ async def text_button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE
                 "Пример: /create_match Ак Барс vs Автомобилист"
             )
             return
-         if text == "🏒 Завершить матч":
-        # 1. Сначала показываем таблицу
+        if text == "🏒 Завершить матч":
             await admin_end_match(update, context)
-        # 2. Затем отправляем подсказку
-            await update.message.reply_text(
-                "🏒 Завершить матч\n\n"
-                "Чтобы завершить матч, введите:\n"
-                "/end_match ID СЧЁТ\n\n"
-                "Пример: /end_match 1 2:1\n\n"
-                "Где ID — номер матча из таблицы выше."
-            )
             return
         if text == "🎫 Промокоды":
             await update.message.reply_text(
