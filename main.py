@@ -157,11 +157,10 @@ def get_admin_keyboard():
         [KeyboardButton("👥 Пользователи"), KeyboardButton("📊 Статистика бота")],
         [KeyboardButton("💰 Выдать деньги"), KeyboardButton("💸 Списать деньги")],
         [KeyboardButton("🚫 Забанить"), KeyboardButton("✅ Разбанить")],
-        [KeyboardButton("🏒 Матчи"), KeyboardButton("🎫 Промокоды")],
-        [KeyboardButton("📢 Рассылка"), KeyboardButton("📨 Сообщения")],
-        [KeyboardButton("🔙 В главное меню")]
+        [KeyboardButton("🏒 Создать матч"), KeyboardButton("🏒 Завершить матч")],
+        [KeyboardButton("🎫 Промокоды"), KeyboardButton("📢 Рассылка")],
+        [KeyboardButton("📨 Сообщения"), KeyboardButton("🔙 В главное меню")]
     ]
-
     return ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
 # =========================
 # DATABASE
