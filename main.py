@@ -1251,6 +1251,7 @@ async def admin_panel(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
         "🔧 Админ панель"
     )
+    reply_markup=get_admin_keyboard():
 
 
 async def admin_users(update: Update, context: ContextTypes.DEFAULT_TYPE):
