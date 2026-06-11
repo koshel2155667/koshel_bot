@@ -448,13 +448,7 @@ def check_quest_completion(user_id):
                 user_id,
                 quest["reward"],
                 f"🎯 Квест: {quest['name']}"
-            )
-
-    # 
-# =========================
-# СПИСКИ КВЕСТОВ
-# =========================
-       DAILY_QUESTS = [
+DAILY_QUESTS = [
         {
         "id": "daily_bets_3",
         "name": "Сделать 3 ставки",
@@ -474,8 +468,7 @@ def check_quest_completion(user_id):
         "reward": 500
         }
         ]
-
-        WEEKLY_QUESTS = [
+WEEKLY_QUESTS = [
         {
         "id": "weekly_bets_20",
         "name": "Сделать 20 ставок",
@@ -496,7 +489,7 @@ def check_quest_completion(user_id):
         }
         ]
 
-        PERMANENT_QUESTS = [
+PERMANENT_QUESTS = [
        {
         "id": "perm_bets_10",
         "name": "10 ставок",
