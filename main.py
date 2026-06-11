@@ -244,6 +244,14 @@ class Database:
                 settled_at INTEGER
             )
             """)
+            self.cursor.execute("""
+            CREATE TABLE IF NOT EXISTS promocode_uses (
+                user_id INTEGER,
+                code TEXT,
+                used_at INTEGER,
+                PRIMARY KEY (user_id, code)
+            )
+            """)
 
             # Промокоды
             self.cursor.execute("""
@@ -1023,8 +1031,18 @@ async def use_promo(update: Update, context: ContextTypes.DEFAULT_TYPE):
         del context.user_data["entering_promo"]
         return
 
+    # Проверяем, использовал ли уже этот пользователь промокод
+    existing = db.fetchone(
+        "SELECT user_id FROM promocode_uses WHERE user_id = ? AND code = ?",
+        (user_id, text)
+    )
+    if existing:
+        await update.message.reply_text("❌ Вы уже использовали этот промокод")
+        del context.user_data["entering_promo"]
+        return
+
     if used_count >= max_uses:
-        await update.message.reply_text("❌ Промокод уже использован")
+        await update.message.reply_text("❌ Промокод уже использован максимальное количество раз")
         del context.user_data["entering_promo"]
         return
 
@@ -1033,16 +1051,11 @@ async def use_promo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # =========================
     if reward_type == "fixed":
         amount = int(reward_value)
-
-        db.execute(
-            "UPDATE users SET balance = balance + ? WHERE user_id = ?",
-            (amount, user_id)
-        )
-
+        db.execute("UPDATE users SET balance = balance + ? WHERE user_id = ?", (amount, user_id))
         add_balance_history(user_id, amount, f"🎫 Промокод {text}")
-
         await update.message.reply_text(
-            f"✅ Промокод активирован!\nВы получили {amount}"
+            f"✅ Промокод активирован!\n"
+            f"Вы получили {amount}"
         )
 
     # =========================
@@ -1050,23 +1063,11 @@ async def use_promo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # =========================
     elif reward_type == "percent":
         percent = int(reward_value)
-
-        user = db.fetchone(
-            "SELECT balance FROM users WHERE user_id = ?",
-            (user_id,)
-        )
-
+        user = db.fetchone("SELECT balance FROM users WHERE user_id = ?", (user_id,))
         balance = user[0]
-
         amount = int(balance * percent / 100)
-
-        db.execute(
-            "UPDATE users SET balance = balance + ? WHERE user_id = ?",
-            (amount, user_id)
-        )
-
+        db.execute("UPDATE users SET balance = balance + ? WHERE user_id = ?", (amount, user_id))
         add_balance_history(user_id, amount, f"🎫 Промокод {text}")
-
         await update.message.reply_text(
             f"✅ Промокод активирован!\n"
             f"Вы получили {percent}% = {amount}"
@@ -1077,7 +1078,6 @@ async def use_promo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # =========================
     elif reward_type == "freebet":
         amount = int(reward_value)
-
         db.execute(
             """
             INSERT INTO freebets
@@ -1096,18 +1096,18 @@ async def use_promo(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 int(time.time()) + 7 * 86400
             )
         )
-
         await update.message.reply_text(
             f"✅ Вы получили фрибет: {amount}"
         )
 
-    # увеличиваем использование промокода
+    # Записываем использование промокода
     db.execute(
-        """
-        UPDATE promocodes
-        SET used_count = used_count + 1
-        WHERE code = ?
-        """,
+        "INSERT INTO promocode_uses (user_id, code, used_at) VALUES (?, ?, ?)",
+        (user_id, text, int(time.time()))
+    )
+
+    db.execute(
+        "UPDATE promocodes SET used_count = used_count + 1 WHERE code = ?",
         (text,)
     )
 
