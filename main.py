@@ -1765,87 +1765,87 @@ async def text_button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE
     # 5. АДМИН КНОПКИ (ВАЖНО: ТОЛЬКО ЕСЛИ ADMIN)
     # =========================
     if user_id in ADMIN_IDS:
-    if text == "🔧 Админ панель":
-        await admin_panel(update, context)
-        return
-    if text == "👥 Пользователи":
-        await admin_users(update, context)
-        return
-    if text == "📊 Статистика бота":
-        await admin_stats(update, context)
-        return
-    if text == "💰 Выдать деньги":
-        await update.message.reply_text(
-            "💳 Выдать деньги\n\n"
-            "Используйте команду:\n"
-            "/give_money ID СУММА\n\n"
-            "Пример: /give_money 123456789 1000"
-        )
-        return
-    if text == "💸 Списать деньги":
-        await update.message.reply_text(
-            "💸 Списать деньги\n\n"
-            "Используйте команду:\n"
-            "/take_money ID СУММА\n\n"
-            "Пример: /take_money 123456789 500"
-        )
-        return
-    if text == "🚫 Забанить":
-        await update.message.reply_text(
-            "🚫 Забанить\n\n"
-            "Используйте команду:\n"
-            "/ban ID\n\n"
-            "Пример: /ban 123456789"
-        )
-        return
-    if text == "✅ Разбанить":
-        await update.message.reply_text(
-            "✅ Разбанить\n\n"
-            "Используйте команду:\n"
-            "/unban ID\n\n"
-            "Пример: /unban 123456789"
-        )
-        return
-    if text == "🏒 Создать матч":
-        await update.message.reply_text(
-            "🏒 Создать матч\n\n"
-            "Используйте команду:\n"
-            "/create_match Команда1 vs Команда2\n\n"
-            "Пример: /create_match Ак Барс vs Автомобилист"
-        )
-        return
-    if text == "🏒 Завершить матч":
-        await update.message.reply_text(
-            "🏒 Завершить матч\n\n"
-            "Используйте команду:\n"
-            "/end_match ID СЧЁТ\n\n"
-            "Пример: /end_match 1 2:1"
-        )
-        return
-    if text == "🎫 Промокоды":
-        await update.message.reply_text(
-            "🎫 Промокоды\n\n"
-            "Используйте команду:\n"
-            "/create_promo КОД ТИП ЗНАЧЕНИЕ [МАКС_ИСПОЛЬЗОВАНИЙ]\n\n"
-            "Пример: /create_promo START2026 fixed 500 10"
-        )
-        return
-    if text == "📢 Рассылка":
-        await update.message.reply_text(
-            "📢 Рассылка\n\n"
-            "Используйте команду:\n"
-            "/broadcast_all СООБЩЕНИЕ\n\n"
-            "Пример: /broadcast_all Привет!"
-        )
-        return
-    if text == "🔙 В главное меню":
-        await update.message.reply_text("Главное меню", reply_markup=get_main_keyboard(user_id))
-        return
+        if text == "🔧 Админ панель":
+            await admin_panel(update, context)
+            return
+        if text == "👥 Пользователи":
+            await admin_users(update, context)
+            return
+        if text == "📊 Статистика бота":
+            await admin_stats(update, context)
+            return
+        if text == "💰 Выдать деньги":
+            await update.message.reply_text(
+                "💳 Выдать деньги\n\n"
+                "Используйте команду:\n"
+                "/give_money ID СУММА\n\n"
+                "Пример: /give_money 123456789 1000"
+            )
+            return
+        if text == "💸 Списать деньги":
+            await update.message.reply_text(
+                "💸 Списать деньги\n\n"
+                "Используйте команду:\n"
+                "/take_money ID СУММА\n\n"
+                "Пример: /take_money 123456789 500"
+            )
+            return
+        if text == "🚫 Забанить":
+            await update.message.reply_text(
+                "🚫 Забанить\n\n"
+                "Используйте команду:\n"
+                "/ban ID\n\n"
+                "Пример: /ban 123456789"
+            )
+            return
+        if text == "✅ Разбанить":
+            await update.message.reply_text(
+                "✅ Разбанить\n\n"
+                "Используйте команду:\n"
+                "/unban ID\n\n"
+                "Пример: /unban 123456789"
+            )
+            return
+        if text == "🏒 Создать матч":
+            await update.message.reply_text(
+                "🏒 Создать матч\n\n"
+                "Используйте команду:\n"
+                "/create_match Команда1 vs Команда2\n\n"
+                "Пример: /create_match Ак Барс vs Автомобилист"
+            )
+            return
+        if text == "🏒 Завершить матч":
+            await update.message.reply_text(
+                "🏒 Завершить матч\n\n"
+                "Используйте команду:\n"
+                "/end_match ID СЧЁТ\n\n"
+                "Пример: /end_match 1 2:1"
+            )
+            return
+        if text == "🎫 Промокоды":
+            await update.message.reply_text(
+                "🎫 Промокоды\n\n"
+                "Используйте команду:\n"
+                "/create_promo КОД ТИП ЗНАЧЕНИЕ [МАКС_ИСПОЛЬЗОВАНИЙ]\n\n"
+                "Пример: /create_promo START2026 fixed 500 10"
+            )
+            return
+        if text == "📢 Рассылка":
+            await update.message.reply_text(
+                "📢 Рассылка\n\n"
+                "Используйте команду:\n"
+                "/broadcast_all СООБЩЕНИЕ\n\n"
+                "Пример: /broadcast_all Привет!"
+            )
+            return
+        if text == "🔙 В главное меню":
+            await update.message.reply_text("Главное меню", reply_markup=get_main_keyboard(user_id))
+            return
 
     # =========================
     # 6. FALLBACK
     # =========================
-    await update.message.reply_text("❌ Неизвестная команда")
+        await update.message.reply_text("❌ Неизвестная команда")
 # =========================
 # 16. MAIN
 # =========================
