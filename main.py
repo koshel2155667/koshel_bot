@@ -636,6 +636,7 @@ async def profile(update: Update, context: ContextTypes.DEFAULT_TYPE):
     win_rate = round(wins / total * 100, 1) if total > 0 else 0
     
     text = f"👤 Профиль\n\n"
+    text += f"ID: {user_id}\n"  # <-- Добавлено
     text += f"💰 Баланс: {format_balance(balance)}\n"
     text += f"🔄 Оборот: {format_balance(turnover)}\n"
     text += f"🏆 Победы: {wins}\n"
@@ -644,7 +645,6 @@ async def profile(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text += f"📈 Процент побед: {win_rate}%\n"
     
     await update.message.reply_text(text, reply_markup=get_main_keyboard(user_id))
-
 
 async def top(update: Update, context: ContextTypes.DEFAULT_TYPE):
     db = Database()
