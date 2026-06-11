@@ -1654,6 +1654,7 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # =========================
 
 async def text_button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    print(f"DEBUG: text_button_handler вызван, text='{text}'")
     user_id = update.effective_user.id
     text = update.message.text.strip()
     print(f"DEBUG: '{text}'")
@@ -1667,6 +1668,7 @@ async def text_button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE
     # =========================
     # 1. ADMIN ACTION MODE (ПРИОРИТЕТ №1)
     # =========================
+    
     if context.user_data.get("admin_action"):
 
         action = context.user_data["admin_action"]
