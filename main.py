@@ -1838,7 +1838,9 @@ async def text_button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE
     if text == "📊 История баланса":
         await balance_history(update, context)
         return
-
+    if text == "🎯 Квесты":
+        await quests(update, context)
+        return
     # =========================
     # 4. ДОП КНОПКИ
     # =========================
