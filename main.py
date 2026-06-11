@@ -1805,11 +1805,11 @@ async def text_button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE
             return
 
         if text == "🔙 В главное меню":
-    await update.message.reply_text(
-        "🏠 Главное меню",
-        reply_markup=get_main_keyboard(user_id)
-    )
-    return
+            await update.message.reply_text(
+            "🏠 Главное меню",
+            reply_markup=get_main_keyboard(user_id)
+            )
+        return
 
     # =========================
     # 6. FALLBACK
