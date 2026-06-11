@@ -1576,15 +1576,15 @@ async def admin_end_match_command(update: Update, context: ContextTypes.DEFAULT_
             bet_id, bet_user_id, bet_choice, amount, odds, potential = bet
             win = False
 
-            if bet_choice == 'p1' and result == "П1":
+            if bet_choice == 'p1' and (result == "П1" or result == "П1"):
                 win = True
-            elif bet_choice == 'p2' and result == "П2":
+            elif bet_choice == 'p2' and (result == "П2" or result == "П2"):
                 win = True
-            elif bet_choice == 'tb' and result_tb == "ТБ":
+            elif bet_choice == 'tb' and (result == "ТБ" or result == "ТБ"):
                 win = True
-            elif bet_choice == 'tm' and result_tb == "ТМ":
+            elif bet_choice == 'tm' and (result == "ТМ" or result == "ТМ"):
                 win = True
-            elif bet_choice == 'ob' and result_ob == "ОБ":
+            elif bet_choice == 'ob' and (result == "ОБ" or result == "ОБ"):
                 win = True
 
             if win:
