@@ -352,7 +352,7 @@ def add_balance_history(
 
     db.execute(
         """
-        INSERT INTO alance_history
+        INSERT INTO balance_history
         (
             user_id,
             amount,
