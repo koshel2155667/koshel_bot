@@ -681,7 +681,10 @@ async def bonus(update: Update, context: ContextTypes.DEFAULT_TYPE):
         remaining = BONUS_INTERVAL - (now - last_bonus_time)
         hours = remaining // 3600
         minutes = (remaining % 3600) // 60
-        await update.message.reply_text(f"⏳ Бонус будет доступен через {hours}ч {minutes}м")
+        seconds = remaining % 60  # <-- Добавлено
+        await update.message.reply_text(
+            f"⏳ Бонус будет доступен через {hours}ч {minutes}м {seconds}с"
+        )
         return
 
     # Начисляем бонус
