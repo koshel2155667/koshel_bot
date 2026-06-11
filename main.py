@@ -580,7 +580,7 @@ async def menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
     pass
 
 
-async def bonus(update: Update, context: ContextTypes.DEFAULT_TYPE):
+
 async def bonus(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
 
