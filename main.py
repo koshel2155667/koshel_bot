@@ -556,7 +556,7 @@ def check_quest_completion(
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
-    db = Database()
+    global db
     
     existing = db.fetchone("SELECT user_id FROM users WHERE user_id = ?", (user.id,))
     
@@ -711,17 +711,6 @@ async def balance_history(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(text, reply_markup=get_main_keyboard(user_id))
 
 
-async def admin_panel(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_id = update.effective_user.id
-
-    if user_id not in ADMIN_IDS:
-        await update.message.reply_text("⛔ Нет доступа")
-        return
-
-    await update.message.reply_text(
-        "🔧 Админ панель",
-        reply_markup=get_admin_keyboard()
-    )
 # =========================
 # 9. ДРУЗЬЯ
 # =========================
@@ -1662,7 +1651,7 @@ async def text_button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE
     if text == "🔧 Админ панель":
         print("✅ Вызываю admin_panel()")
         await admin_panel(update, context)
-    return
+        return
     
     # ... остальной код ...
     # =========================
@@ -1816,11 +1805,11 @@ async def text_button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE
             return
 
         if text == "🔙 В главное меню":
-            await update.message.reply_text(
-                "🏠 Главное меню",
-                reply_markup=get_main_keyboard()
-            )
-            return
+    await update.message.reply_text(
+        "🏠 Главное меню",
+        reply_markup=get_main_keyboard(user_id)
+    )
+    return
 
     # =========================
     # 6. FALLBACK
