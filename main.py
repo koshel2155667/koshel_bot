@@ -681,7 +681,7 @@ async def bonus(update: Update, context: ContextTypes.DEFAULT_TYPE):
         remaining = BONUS_INTERVAL - (now - last_bonus_time)
         hours = remaining // 3600
         minutes = (remaining % 3600) // 60
-        seconds = remaining % 60  # <-- Добавлено
+        seconds = remaining % 60
         await update.message.reply_text(
             f"⏳ Бонус будет доступен через {hours}ч {minutes}м {seconds}с"
         )
@@ -690,15 +690,18 @@ async def bonus(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # Начисляем бонус
     amount = random.randint(BONUS_MIN, BONUS_MAX)
     db.execute("UPDATE users SET balance = balance + ?, last_bonus_time = ? WHERE user_id = ?", (amount, now, user_id))
+    
+    # ✅ Добавляем запись в историю баланса
     add_balance_history(user_id, amount, "🎁 Бонус")
-
-    # Ставим флаг, чтобы бонус не начислился повторно
-    context.user_data["bonus_claimed"] = True
-
+    
+    # ✅ Сообщение пользователю
     await update.message.reply_text(
         f"🎁 Вы получили бонус!\n"
         f"Ваш баланс: {format_balance(balance + amount)}"
     )
+
+    # Ставим флаг, чтобы бонус не начислился повторно
+    context.user_data["bonus_claimed"] = True
 async def profile(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     db = Database()
