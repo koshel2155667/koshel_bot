@@ -1659,8 +1659,8 @@ async def text_button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE
     print(f"DEBUG: '{text}'")
     print(f"DEBUG: text='{text}', user_id={user_id}, is_admin={user_id in ADMIN_IDS}")
     if text == "🔧 Админ панель":
-    print("✅ Вызываю admin_panel()")
-    await admin_panel(update, context)
+        print("✅ Вызываю admin_panel()")
+        await admin_panel(update, context)
     return
     
     # ... остальной код ...
