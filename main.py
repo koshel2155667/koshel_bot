@@ -370,9 +370,77 @@ def add_balance_history(
     )
 
 
-def check_quest_completion(
-    user_id
-):
+
+def check_quest_completion(user_id):
+    # Ежедневные
+    for quest in DAILY_QUESTS:
+        data = db.fetchone(
+            "SELECT progress, completed FROM quests WHERE user_id = ? AND quest_id = ?",
+            (user_id, quest["id"])
+        )
+        if not data:
+            continue
+        progress, completed = data
+        if completed == 0 and progress >= quest["target"]:
+            db.execute(
+                "UPDATE quests SET completed = 1, completed_at = ? WHERE user_id = ? AND quest_id = ?",
+                (int(time.time()), user_id, quest["id"])
+            )
+            db.execute(
+                "UPDATE users SET balance = balance + ? WHERE user_id = ?",
+                (quest["reward"], user_id)
+            )
+            add_balance_history(
+                user_id,
+                quest["reward"],
+                f"🎯 Квест: {quest['name']}"
+            )
+    # Еженедельные
+    for quest in WEEKLY_QUESTS:
+        data = db.fetchone(
+            "SELECT progress, completed FROM quests WHERE user_id = ? AND quest_id = ?",
+            (user_id, quest["id"])
+        )
+        if not data:
+            continue
+        progress, completed = data
+        if completed == 0 and progress >= quest["target"]:
+            db.execute(
+                "UPDATE quests SET completed = 1, completed_at = ? WHERE user_id = ? AND quest_id = ?",
+                (int(time.time()), user_id, quest["id"])
+            )
+            db.execute(
+                "UPDATE users SET balance = balance + ? WHERE user_id = ?",
+                (quest["reward"], user_id)
+            )
+            add_balance_history(
+                user_id,
+                quest["reward"],
+                f"🎯 Квест: {quest['name']}"
+            )
+    # Постоянные
+    for quest in PERMANENT_QUESTS:
+        data = db.fetchone(
+            "SELECT progress, completed FROM quests WHERE user_id = ? AND quest_id = ?",
+            (user_id, quest["id"])
+        )
+        if not data:
+            continue
+        progress, completed = data
+        if completed == 0 and progress >= quest["target"]:
+            db.execute(
+                "UPDATE quests SET completed = 1, completed_at = ? WHERE user_id = ? AND quest_id = ?",
+                (int(time.time()), user_id, quest["id"])
+            )
+            db.execute(
+                "UPDATE users SET balance = balance + ? WHERE user_id = ?",
+                (quest["reward"], user_id)
+            )
+            add_balance_history(
+                user_id,
+                quest["reward"],
+                f"🎯 Квест: {quest['name']}"
+            )
 
     # 
 # =========================
