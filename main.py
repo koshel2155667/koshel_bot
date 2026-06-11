@@ -581,43 +581,43 @@ async def menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 async def bonus(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def bonus(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
+
+    # Защита от повторного начисления
+    if context.user_data.get("bonus_claimed"):
+        await update.message.reply_text("⏳ Бонус уже был получен. Подождите.")
+        return
+
     db = Database()
     user = db.fetchone("SELECT last_bonus_time, balance FROM users WHERE user_id = ?", (user_id,))
     if not user:
         await update.message.reply_text("❌ Вы не зарегистрированы")
         return
+
     last_bonus_time, balance = user
     now = int(time.time())
+
+    # Проверка интервала
     if now - last_bonus_time < BONUS_INTERVAL:
         remaining = BONUS_INTERVAL - (now - last_bonus_time)
         hours = remaining // 3600
         minutes = (remaining % 3600) // 60
         await update.message.reply_text(f"⏳ Бонус будет доступен через {hours}ч {minutes}м")
         return
+
+    # Начисляем бонус
     amount = random.randint(BONUS_MIN, BONUS_MAX)
     db.execute("UPDATE users SET balance = balance + ?, last_bonus_time = ? WHERE user_id = ?", (amount, now, user_id))
     add_balance_history(user_id, amount, "🎁 Бонус")
+
+    # Ставим флаг, чтобы бонус не начислился повторно
+    context.user_data["bonus_claimed"] = True
+
     await update.message.reply_text(
         f"🎁 Вы получили бонус!\n"
-        f"Ваш баланс: {format_balance(balance + amount)}"  # <-- добавляем уведомление
+        f"Ваш баланс: {format_balance(balance + amount)}"
     )
-    last_bonus_time, balance = user
-    now = int(time.time())
-    
-    if now - last_bonus_time < BONUS_INTERVAL:
-        remaining = BONUS_INTERVAL - (now - last_bonus_time)
-        hours = remaining // 3600
-        minutes = (remaining % 3600) // 60
-        await update.message.reply_text(f"⏳ Бонус будет доступен через {hours}ч {minutes}м")
-        return
-    
-    amount = random.randint(BONUS_MIN, BONUS_MAX)
-    db.execute("UPDATE users SET balance = balance + ?, last_bonus_time = ? WHERE user_id = ?", (amount, now, user_id))
-    add_balance_history(user_id, amount, "🎁 Бонус")
-    await update.message.reply_text(f"🎁 Вы получили бонус!")
-
-
 async def profile(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     db = Database()
