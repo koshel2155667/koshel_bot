@@ -550,6 +550,22 @@ def check_quest_completion(
                 quest["reward"],
                 f"🎯 Квест: {quest['name']}"
             )
+            async def quests(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
+    db = Database()
+    
+    data = db.fetchall("SELECT quest_id, progress, completed FROM quests WHERE user_id = ?", (user_id,))
+    
+    if not data:
+        await update.message.reply_text("🎯 Квесты не найдены")
+        return
+    
+    text = "🎯 Квесты\n\n"
+    for q in data:
+        status = "✅" if q[2] else f"{q[1]}/{q[0]}"
+        text += f"{q[0]}: {status}\n"
+    
+    await update.message.reply_text(text, reply_markup=get_main_keyboard(user_id))
 # =========================
 # ОСНОВНЫЕ КОМАНДЫ
 # =========================
